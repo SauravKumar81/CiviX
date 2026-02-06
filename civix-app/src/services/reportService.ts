@@ -11,6 +11,8 @@ export interface Report {
     type: 'Point';
     coordinates: [number, number];
     formattedAddress?: string;
+    city?: string;
+    state?: string;
   };
   user?: {
     _id: string;
