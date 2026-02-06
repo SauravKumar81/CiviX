@@ -1,15 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Home, Compass, FileText, Bell, User, Search, TrendingUp, Map as MapIcon, 
   Plus, MoreHorizontal, Heart, MessageSquare, Share2, Bookmark,
   Menu, X, ChevronLeft, ChevronRight, Moon, Sun
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { getReports } from '../services/reportService';
+import type { Report } from '../services/reportService';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const HomeFeed: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
   const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const data = await getReports();
+        setReports(data.data);
+      } catch (error) {
+        console.error('Error fetching reports:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950 font-sans relative overflow-x-hidden transition-colors duration-300">
@@ -66,11 +87,41 @@ const HomeFeed: React.FC = () => {
 
         {/* Navigation */}
         <nav className="flex-1 px-4 space-y-1">
-          <NavItem icon={<Home className="w-5 h-5" />} label="Home" active collapsed={isSidebarCollapsed} />
-          <NavItem icon={<Compass className="w-5 h-5" />} label="Explore" collapsed={isSidebarCollapsed} />
-          <NavItem icon={<FileText className="w-5 h-5" />} label="Reports" collapsed={isSidebarCollapsed} />
-          <NavItem icon={<Bell className="w-5 h-5" />} label="Notifications" collapsed={isSidebarCollapsed} />
-          <NavItem icon={<User className="w-5 h-5" />} label="Profile" collapsed={isSidebarCollapsed} />
+          <NavItem 
+            icon={<Home className="w-5 h-5" />} 
+            label="Home" 
+            active={location.pathname === '/'} 
+            collapsed={isSidebarCollapsed} 
+            onClick={() => navigate('/')}
+          />
+          <NavItem 
+            icon={<Compass className="w-5 h-5" />} 
+            label="Explore" 
+            active={location.pathname === '/map'}
+            collapsed={isSidebarCollapsed} 
+            onClick={() => navigate('/map')}
+          />
+          <NavItem 
+            icon={<FileText className="w-5 h-5" />} 
+            label="Reports" 
+            active={location.pathname === '/reports'}
+            collapsed={isSidebarCollapsed} 
+            onClick={() => navigate('/')} 
+          />
+          <NavItem 
+            icon={<Bell className="w-5 h-5" />} 
+            label="Notifications" 
+            active={location.pathname === '/notifications'}
+            collapsed={isSidebarCollapsed} 
+            onClick={() => navigate('/')} 
+          />
+          <NavItem 
+            icon={<User className="w-5 h-5" />} 
+            label="Profile" 
+            active={location.pathname === '/profile'}
+            collapsed={isSidebarCollapsed} 
+            onClick={() => navigate('/')} 
+          />
         </nav>
 
         {/* Bottom Section */}
@@ -86,12 +137,18 @@ const HomeFeed: React.FC = () => {
             <span className={isSidebarCollapsed ? 'lg:hidden' : 'block'}>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
           </button>
 
-          <button className={`w-full py-3 bg-primary text-white font-bold rounded-eight shadow-lg shadow-primary/20 flex items-center justify-center gap-2 ${isSidebarCollapsed ? 'px-0' : ''}`}>
+          <button 
+            onClick={() => navigate('/report')}
+            className={`w-full py-3 bg-primary text-white font-bold rounded-eight shadow-lg shadow-primary/20 flex items-center justify-center gap-2 ${isSidebarCollapsed ? 'px-0' : ''}`}
+          >
             <Plus className="w-5 h-5 flex-shrink-0" />
             <span className={isSidebarCollapsed ? 'lg:hidden' : 'block'}>Report Issue</span>
           </button>
           
-          <div className={`flex items-center p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 gap-3 ${isSidebarCollapsed ? 'lg:justify-center' : ''}`}>
+          <div 
+            onClick={() => navigate('/logout')}
+            className={`flex items-center p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 gap-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${isSidebarCollapsed ? 'lg:justify-center' : ''}`}
+          >
             <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100" className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="User" />
             {!isSidebarCollapsed && (
               <div className="flex-1 min-w-0">
@@ -153,28 +210,39 @@ const HomeFeed: React.FC = () => {
             </div>
 
             <div className="bg-gray-50/30 dark:bg-gray-900/10">
-              {/* Sample Feed Item */}
-              <FeedItem 
-                user={{ name: "Sarah Jenkins", handle: "@sarah_j", time: "2h", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100" }}
-                category="INFRASTRUCTURE"
-                tag="PRIORITY"
-                content="The pothole at the intersection of Main and 5th has grown significantly. It's causing major traffic delays during morning rush hour and is a severe hazard for cyclists. Multiple residents have reported this over the last week."
-                image="https://images.unsplash.com/photo-1515162816999-a0ca4981440d?auto=format&fit=crop&q=80&w=800"
-                engagement={{ likes: "1.2k", comments: "64", shares: "12" }}
-                status="PENDING"
-              />
-
-              <FeedItem 
-                user={{ name: "Marcus Rivera", handle: "@mrivera", time: "5h", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100" }}
-                category="PUBLIC SAFETY"
-                content="Street lighting on Elm Street has been out for three blocks. It creates unsafe conditions for pedestrians walking from the subway station after dark."
-                images={[
-                  "https://images.unsplash.com/photo-1555529733-0e670560f7e1?auto=format&fit=crop&q=80&w=600",
-                  "https://images.unsplash.com/photo-1518331647614-7a1f04cd34cf?auto=format&fit=crop&q=80&w=600"
-                ]}
-                engagement={{ likes: "432", comments: "21", shares: "5" }}
-                status="UNDER REVIEW"
-              />
+              {loading ? (
+                <div className="flex flex-col items-center justify-center p-20 space-y-4">
+                  <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                  <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Loading city reports...</p>
+                </div>
+              ) : reports.length > 0 ? (
+                reports.map((report) => (
+                  <FeedItem 
+                    key={report._id}
+                    user={{ 
+                      name: report.user?.username || "Anonymous", 
+                      handle: `@${report.user?.username?.toLowerCase().replace(/\s/g, '') || "citizen"}`, 
+                      time: "Just now", 
+                      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=100" 
+                    }}
+                    category={report.category.toUpperCase()}
+                    content={report.description}
+                    image={report.imageUrl !== 'no-photo.jpg' ? report.imageUrl : undefined}
+                    engagement={{ likes: report.upvotes?.toString() || "0", comments: "0", shares: "0" }}
+                    status={report.status.toUpperCase()}
+                  />
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center p-20 text-center space-y-4">
+                   <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+                      <FileText className="w-10 h-10 text-gray-400" />
+                   </div>
+                   <div className="space-y-1">
+                      <p className="text-gray-900 dark:text-white font-black text-lg">No reports found</p>
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">Be the first to report an issue in your area.</p>
+                   </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -238,8 +306,11 @@ const HomeFeed: React.FC = () => {
   );
 };
 
-const NavItem = ({ icon, label, active = false, collapsed = false }: { icon: React.ReactNode, label: string, active?: boolean, collapsed?: boolean }) => (
-  <button className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${active ? 'bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400 shadow-sm shadow-blue-100/50 dark:shadow-none' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'} ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+const NavItem = ({ icon, label, active = false, collapsed = false, onClick }: { icon: React.ReactNode, label: string, active?: boolean, collapsed?: boolean, onClick?: () => void }) => (
+  <button 
+    onClick={onClick}
+    className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${active ? 'bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400 shadow-sm shadow-blue-100/50 dark:shadow-none' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'} ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}
+  >
     <div className="flex-shrink-0">{icon}</div>
     <span className={collapsed ? 'lg:hidden' : 'block'}>{label}</span>
   </button>
@@ -251,7 +322,27 @@ const Tab = ({ label, active = false }: { label: string, active?: boolean }) => 
   </button>
 );
 
-const FeedItem = ({ user, category, tag, content, image, images, engagement, status }: any) => (
+interface FeedItemProps {
+  user: {
+    name: string;
+    handle: string;
+    time: string;
+    avatar: string;
+  };
+  category: string;
+  tag?: string;
+  content: string;
+  image?: string;
+  images?: string[];
+  engagement: {
+    likes: string;
+    comments: string;
+    shares: string;
+  };
+  status: string;
+}
+
+const FeedItem = ({ user, category, tag, content, image, images, engagement, status }: FeedItemProps) => (
   <div className="p-4 md:p-6 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors cursor-pointer group bg-white dark:bg-gray-950">
     <div className="flex gap-4">
       <img src={user.avatar} className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-white dark:border-gray-800 shadow-sm flex-shrink-0" alt={user.name} />

@@ -1,8 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Mail, Lock, Chrome, Apple, ArrowRight, Shield, Users } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { login as authLogin } from '../services/authService';
 
 const LoginPage: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      return setError('Please fill in all fields');
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      await authLogin({ email, password });
+      const state = location.state as { from?: { pathname: string } } | null;
+      const origin = state?.from?.pathname || '/';
+      navigate(origin, { replace: true });
+    } catch (err) {
+      const errorMessage = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Invalid credentials';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen grid lg:grid-cols-2 font-sans bg-white dark:bg-gray-950 transition-colors duration-300">
       {/* Visual Side - Hidden on Mobile */}
@@ -47,14 +77,22 @@ const LoginPage: React.FC = () => {
             <p className="text-gray-500 dark:text-gray-400 font-medium text-lg">Enter your details to access your dashboard</p>
           </div>
 
-          <div className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-4">
+              {error && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-bold rounded-2xl border border-red-100 dark:border-red-800">
+                  {error}
+                </div>
+              )}
+              
               <div className="space-y-2 group">
                 <label className="text-sm font-black text-gray-900 dark:text-gray-200 uppercase tracking-widest block transition-colors group-focus-within:text-primary">Email Address</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500 transition-colors group-focus-within:text-primary" />
                   <input 
                     type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@company.com" 
                     className="w-full h-14 pl-12 pr-4 bg-gray-50 dark:bg-gray-900 border-2 border-transparent rounded-2xl focus:bg-white dark:focus:bg-gray-800 focus:border-primary outline-none transition-all text-gray-900 dark:text-white font-medium placeholder:text-gray-400"
                   />
@@ -70,6 +108,8 @@ const LoginPage: React.FC = () => {
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500 transition-colors group-focus-within:text-primary" />
                   <input 
                     type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••" 
                     className="w-full h-14 pl-12 pr-4 bg-gray-50 dark:bg-gray-900 border-2 border-transparent rounded-2xl focus:bg-white dark:focus:bg-gray-800 focus:border-primary outline-none transition-all text-gray-900 dark:text-white font-medium placeholder:text-gray-400"
                   />
@@ -77,12 +117,14 @@ const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            <Link to="/">
-              <button className="w-full h-14 bg-primary hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] mt-8">
-                Sign In
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </Link>
+            <button 
+              type="submit"
+              disabled={loading}
+              className="w-full h-14 bg-primary hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Signing In...' : 'Sign In'}
+              {!loading && <ArrowRight className="w-5 h-5" />}
+            </button>
 
             <div className="relative py-4">
               <div className="absolute inset-0 flex items-center">
@@ -97,7 +139,7 @@ const LoginPage: React.FC = () => {
               <SocialButton icon={<Chrome className="w-5 h-5" />} label="Google" />
               <SocialButton icon={<Apple className="w-5 h-5" />} label="Apple ID" />
             </div>
-          </div>
+          </form>
 
           <p className="text-center font-bold text-gray-500 dark:text-gray-400">
             Don't have an account? <a href="#" className="text-primary hover:text-blue-700 transition-colors">Create Account</a>
@@ -108,13 +150,19 @@ const LoginPage: React.FC = () => {
   );
 };
 
-const Stat = ({ icon: Icon, value, label }: { icon: any, value: string, label: string }) => (
+interface LucideIconProps extends React.SVGProps<SVGSVGElement> {
+  size?: number | string;
+}
+
+type LucideIcon = React.FC<LucideIconProps>;
+
+const Stat = ({ icon: Icon, value, label }: { icon: LucideIcon, value: string, label: string }) => (
   <div className="space-y-1">
-    <div className="flex items-center gap-2 text-white/60 mb-2">
-      <Icon size={18} />
-      <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+    <div className="flex items-center gap-2 text-white">
+      <Icon className="w-5 h-5 text-blue-200" />
+      <span className="text-2xl font-black">{value}</span>
     </div>
-    <div className="text-3xl font-black text-white tracking-tight">{value}</div>
+    <p className="text-xs font-bold text-blue-100/60 uppercase tracking-widest">{label}</p>
   </div>
 );
 
