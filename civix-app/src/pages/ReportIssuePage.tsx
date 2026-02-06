@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, MapPin, ChevronLeft, Send, Info, LucideIcon, Trash2 } from 'lucide-react';
+import { Camera, MapPin, ChevronLeft, Send, Info, Trash } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const ReportIssuePage: React.FC = () => {
@@ -50,7 +50,7 @@ const ReportIssuePage: React.FC = () => {
               </div>
               <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-3xl relative overflow-hidden group">
                 <img src="https://images.unsplash.com/photo-1515162816999-a0ca4981440d?auto=format&fit=crop&q=80&w=400" className="w-full h-full object-cover" alt="Preview" />
-                <button className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4" /></button>
+                <button className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><Trash className="w-4 h-4" /></button>
               </div>
             </div>
           </div>
@@ -93,7 +93,7 @@ const ReportIssuePage: React.FC = () => {
   );
 };
 
-const CategoryCard = ({ label, icon: Icon, active = false }: { label: string, icon: LucideIcon, active?: boolean }) => (
+const CategoryCard = ({ label, icon: Icon, active = false }: { label: string, icon: any, active?: boolean }) => (
   <button className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${active ? 'bg-blue-50 dark:bg-blue-900/20 border-primary' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700'}`}>
     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${active ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
       <Icon size={20} />

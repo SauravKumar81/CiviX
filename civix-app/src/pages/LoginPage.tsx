@@ -34,8 +34,8 @@ const LoginPage: React.FC = () => {
         </div>
 
         <div className="relative z-10 grid grid-cols-2 gap-8">
-          <Stat icon={<Shield />} value="12k+" label="Issues Resolved" />
-          <Stat icon={<Users />} value="85k" label="Active Citizens" />
+          <Stat icon={Shield} value="12k+" label="Issues Resolved" />
+          <Stat icon={Users} value="85k" label="Active Citizens" />
         </div>
       </div>
 
@@ -108,10 +108,10 @@ const LoginPage: React.FC = () => {
   );
 };
 
-const Stat = ({ icon, value, label }: { icon: React.ReactNode, value: string, label: string }) => (
+const Stat = ({ icon: Icon, value, label }: { icon: any, value: string, label: string }) => (
   <div className="space-y-1">
     <div className="flex items-center gap-2 text-white/60 mb-2">
-      {React.cloneElement(icon as React.ReactElement, { size: 18 })}
+      <Icon size={18} />
       <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
     </div>
     <div className="text-3xl font-black text-white tracking-tight">{value}</div>

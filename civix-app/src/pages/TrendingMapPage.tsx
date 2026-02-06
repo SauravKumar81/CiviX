@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   ChevronLeft, Search, Navigation2, Layers, Info, Filter, List, 
-  MapPin, Heart, MessageSquare, ChevronDown
+  Heart, MessageSquare, ChevronDown
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
