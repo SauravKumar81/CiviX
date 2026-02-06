@@ -5,7 +5,20 @@ const Report = require('../models/Report');
 // @access  Public
 exports.getReports = async (req, res, next) => {
   try {
-    const reports = await Report.find().populate({
+    const query = {};
+
+    // Filter by city/state if provided
+    if (req.query.city) {
+      query['location.city'] = req.query.city;
+    }
+    if (req.query.state) {
+      query['location.state'] = req.query.state;
+    }
+    if (req.query.user) {
+      query.user = req.query.user;
+    }
+
+    const reports = await Report.find(query).sort({ createdAt: -1 }).populate({
       path: 'user',
       select: 'name rank'
     });
@@ -48,17 +61,45 @@ exports.getReport = async (req, res, next) => {
 // @access  Private
 exports.createReport = async (req, res, next) => {
   try {
-    // Add user to req.body
-    req.body.user = req.user.id;
+    console.log('--- CREATE REPORT DEBUG ---');
+    console.log('Body:', req.body);
+    console.log('User:', req.user ? req.user.id : 'NO USER');
+    console.log('File:', req.file ? req.file.path : 'NO FILE');
 
-    const report = await Report.create(req.body);
+    const reportData = { ...req.body };
+    
+    // Add user to reportData
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Not authorized' });
+    }
+    reportData.user = req.user.id;
+
+    // Add image URL if uploaded
+    if (req.file) {
+      reportData.imageUrl = req.file.path;
+    }
+
+    // If location is sent as stringified JSON (common with FormData), parse it
+    if (typeof reportData.location === 'string') {
+      try {
+        console.log('Parsing location string...');
+        reportData.location = JSON.parse(reportData.location);
+      } catch (e) {
+        console.error('Location parsing error:', e);
+      }
+    }
+
+    console.log('Final Report Data:', reportData);
+
+    const report = await Report.create(reportData);
 
     res.status(201).json({
       success: true,
       data: report
     });
   } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
+    console.error('Create Report Error:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
@@ -78,7 +119,23 @@ exports.updateReport = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Not authorized to update this report' });
     }
 
-    report = await Report.findByIdAndUpdate(req.params.id, req.body, {
+    const updateData = { ...req.body };
+
+    // Add new image URL if uploaded
+    if (req.file) {
+      updateData.imageUrl = req.file.path;
+    }
+
+    // Parse location if stringified (FormData)
+    if (typeof updateData.location === 'string') {
+      try {
+        updateData.location = JSON.parse(updateData.location);
+      } catch (e) {
+        // Fallback
+      }
+    }
+
+    report = await Report.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true
     });

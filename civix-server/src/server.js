@@ -31,6 +31,15 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/api/auth', auth);
 app.use('/api/reports', reports);
 
+// Error Handler Middleware
+app.use((err, req, res, next) => {
+  console.error('SERVER ERROR:', err);
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.message || 'Server Error'
+  });
+});
+
 // Basic Route
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to Civix API' });

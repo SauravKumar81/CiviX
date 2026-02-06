@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Chrome, Apple, ArrowRight, Shield, Users } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { login as authLogin } from '../services/authService';
+import { Mail, Lock, ArrowRight, Shield, Users } from 'lucide-react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
+import { login as serviceLogin, googleAuth } from '../services/authService';
+import { useAuth } from '../context/AuthContext';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -11,20 +13,47 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const { login: authContextLogin } = useAuth(); // Renamed to avoid conflict with service login
+
+  const onGoogleSuccess = async (credentialResponse: any) => {
+    if (!credentialResponse.credential) return;
+    setLoading(true);
+    setError('');
+    try {
+      const result = await googleAuth(credentialResponse.credential);
+      if (result.token) {
+        authContextLogin(result.token);
+        navigate('/');
+      } else if (result.newUser) {
+        navigate('/signup', { state: { email: result.email, name: result.name } });
+      }
+    } catch (err: any) {
+      if (err.response?.status === 404 && err.response?.data?.newUser) {
+        navigate('/signup', { state: { email: err.response.data.email, name: err.response.data.name } });
+      } else {
+        setError('Google authentication failed');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       return setError('Please fill in all fields');
     }
-    
     setLoading(true);
     setError('');
     
     try {
-      await authLogin({ email, password });
-      const state = location.state as { from?: { pathname: string } } | null;
-      const origin = state?.from?.pathname || '/';
-      navigate(origin, { replace: true });
+      const response = await serviceLogin({ email, password });
+      if (response.token) {
+        authContextLogin(response.token);
+        const state = location.state as { from?: { pathname: string } } | null;
+        const origin = state?.from?.pathname || '/';
+        navigate(origin, { replace: true });
+      }
     } catch (err) {
       const errorMessage = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Invalid credentials';
       setError(errorMessage);
@@ -135,14 +164,20 @@ const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <SocialButton icon={<Chrome className="w-5 h-5" />} label="Google" />
-              <SocialButton icon={<Apple className="w-5 h-5" />} label="Apple ID" />
+            <div className="flex flex-col items-center gap-4">
+              <GoogleLogin 
+                onSuccess={onGoogleSuccess}
+                onError={() => setError('Google login failed')}
+                theme="filled_blue"
+                shape="pill"
+                text="continue_with"
+                width="250"
+              />
             </div>
           </form>
 
           <p className="text-center font-bold text-gray-500 dark:text-gray-400">
-            Don't have an account? <a href="#" className="text-primary hover:text-blue-700 transition-colors">Create Account</a>
+            Don't have an account? <Link to="/signup" className="text-primary hover:text-blue-700 transition-colors">Create Account</Link>
           </p>
         </div>
       </div>
@@ -166,11 +201,5 @@ const Stat = ({ icon: Icon, value, label }: { icon: LucideIcon, value: string, l
   </div>
 );
 
-const SocialButton = ({ icon, label }: { icon: React.ReactNode, label: string }) => (
-  <button className="h-14 flex items-center justify-center gap-3 border-2 border-gray-100 dark:border-gray-800 rounded-2xl font-black text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 hover:border-gray-200 dark:hover:border-gray-700 transition-all active:scale-[0.95]">
-    {icon}
-    <span>{label}</span>
-  </button>
-);
 
 export default LoginPage;

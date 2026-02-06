@@ -14,7 +14,7 @@ export interface Report {
   };
   user?: {
     _id: string;
-    username: string;
+    name: string;
     email: string;
   };
   upvotes?: number;
@@ -22,8 +22,8 @@ export interface Report {
   createdAt?: string;
 }
 
-export const getReports = async () => {
-  const response = await api.get('/reports');
+export const getReports = async (filters?: { city?: string; state?: string; user?: string }) => {
+  const response = await api.get('/reports', { params: filters });
   return response.data;
 };
 
@@ -32,12 +32,12 @@ export const getReport = async (id: string) => {
   return response.data;
 };
 
-export const createReport = async (reportData: Report) => {
+export const createReport = async (reportData: Report | FormData) => {
   const response = await api.post('/reports', reportData);
   return response.data;
 };
 
-export const updateReport = async (id: string, reportData: Partial<Report>) => {
+export const updateReport = async (id: string, reportData: Partial<Report> | FormData) => {
   const response = await api.put(`/reports/${id}`, reportData);
   return response.data;
 };

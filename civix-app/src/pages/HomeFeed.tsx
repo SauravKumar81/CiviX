@@ -2,35 +2,105 @@ import React, { useState, useEffect } from 'react';
 import { 
   Home, Compass, FileText, Bell, User, Search, TrendingUp, Map as MapIcon, 
   Plus, MoreHorizontal, Heart, MessageSquare, Share2, Bookmark,
-  Menu, X, ChevronLeft, ChevronRight, Moon, Sun
+  Menu, X, ChevronLeft, ChevronRight, Moon, Sun, MapPin
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { getReports } from '../services/reportService';
+import { getReports, updateReport, createReport } from '../services/reportService';
 import type { Report } from '../services/reportService';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const HomeFeed: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [postContent, setPostContent] = useState('');
+  const [isPosting, setIsPosting] = useState(false);
+  const { isAuthenticated, loading: authLoading, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const data = await getReports();
-        setReports(data.data);
-      } catch (error) {
-        console.error('Error fetching reports:', error);
-      } finally {
-        setLoading(false);
+  const [activeFilter, setActiveFilter] = useState<'local' | 'global' | 'mine'>('global');
+  const [userLocation, setUserLocation] = useState<{ city?: string; state?: string } | null>(null);
+
+  const fetchReports = async (filterOverride?: 'local' | 'global' | 'mine') => {
+    setLoading(true);
+    try {
+      const filter = filterOverride || activeFilter;
+      let filters: any = {};
+      
+      if (filter === 'local' && userLocation) {
+        filters = { city: userLocation.city, state: userLocation.state };
+      } else if (filter === 'mine' && user?.id) {
+        filters = { user: user.id };
       }
-    };
+      
+      const data = await getReports(filters);
+      setReports(data.data);
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const detectLocation = () => {
+    if (!navigator.geolocation) return;
+    
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json`);
+        const data = await response.json();
+        const address = data.address;
+        const location = {
+          city: address.city || address.town || address.village,
+          state: address.state
+        };
+        setUserLocation(location);
+        // We don't automatically trigger fetch here to avoid double loading on mount,
+        // but if the user switches to 'local' later, it will work.
+      } catch (err) {
+        console.error('Reverse geocoding failed:', err);
+      }
+    });
+  };
+
+  useEffect(() => {
+    detectLocation();
     fetchReports();
   }, []);
+
+  const handleFilterChange = (filter: 'local' | 'global' | 'mine') => {
+    setActiveFilter(filter);
+    fetchReports(filter);
+  };
+
+  const handleQuickPost = async () => {
+    if (!isAuthenticated) return navigate('/login');
+    if (!postContent.trim()) return;
+    setIsPosting(true);
+    try {
+      await createReport({
+        title: `Quick Alert - ${postContent.slice(0, 20)}...`,
+        description: postContent,
+        category: 'Other',
+        status: 'pending',
+        location: {
+          type: 'Point',
+          coordinates: [-122.3321, 47.6062], // Default Seattle
+          formattedAddress: 'Seattle'
+        }
+      });
+      setPostContent('');
+      fetchReports();
+    } catch (error) {
+      console.error('Quick post failed:', error);
+    } finally {
+      setIsPosting(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950 font-sans relative overflow-x-hidden transition-colors duration-300">
@@ -90,24 +160,50 @@ const HomeFeed: React.FC = () => {
           <NavItem 
             icon={<Home className="w-5 h-5" />} 
             label="Home" 
-            active={location.pathname === '/'} 
+            active={activeFilter === 'global' && location.pathname === '/'} 
             collapsed={isSidebarCollapsed} 
-            onClick={() => navigate('/')}
+            onClick={() => handleFilterChange('global')}
           />
           <NavItem 
             icon={<Compass className="w-5 h-5" />} 
             label="Explore" 
-            active={location.pathname === '/map'}
+            active={false} 
             collapsed={isSidebarCollapsed} 
             onClick={() => navigate('/map')}
           />
+          
+          {/* Reports Group */}
+          <div className={`mt-6 mb-2 px-2 text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
+            Reports
+          </div>
+          
+          <NavItem 
+            icon={<MapPin className="w-5 h-5" />} 
+            label="State and City" 
+            active={activeFilter === 'local'} 
+            collapsed={isSidebarCollapsed} 
+            onClick={() => handleFilterChange('local')}
+          />
+          <NavItem 
+            icon={<Compass className="w-5 h-5" />} 
+            label="All Country Reports" 
+            active={activeFilter === 'global' && location.pathname !== '/'} 
+            collapsed={isSidebarCollapsed} 
+            onClick={() => handleFilterChange('global')}
+          />
           <NavItem 
             icon={<FileText className="w-5 h-5" />} 
-            label="Reports" 
-            active={location.pathname === '/reports'}
+            label="My Reports" 
+            active={activeFilter === 'mine'} 
             collapsed={isSidebarCollapsed} 
-            onClick={() => navigate('/')} 
+            onClick={() => {
+              if (!isAuthenticated) return navigate('/login');
+              handleFilterChange('mine');
+            }} 
           />
+
+          <div className="my-4 border-t border-gray-100 dark:border-gray-800" />
+
           <NavItem 
             icon={<Bell className="w-5 h-5" />} 
             label="Notifications" 
@@ -183,24 +279,55 @@ const HomeFeed: React.FC = () => {
             </header>
 
             <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
-              <div className="flex gap-4">
-                <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100" className="w-12 h-12 rounded-full object-cover" alt="User" />
-                <div className="flex-1">
-                  <textarea 
-                    placeholder="What's happening in your neighborhood?" 
-                    className="w-full p-2 text-lg text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none resize-none bg-transparent"
-                    rows={2}
-                  />
-                  <div className="flex justify-between items-center mt-4">
-                    <div className="flex gap-4 text-primary">
-                      <button className="p-2 hover:bg-primary/10 rounded-lg transition-colors"><MapIcon className="w-5 h-5" /></button>
-                      <button className="p-2 hover:bg-primary/10 rounded-lg transition-colors"><Bell className="w-5 h-5" /></button>
-                      <button className="p-2 hover:bg-primary/10 rounded-lg transition-colors"><Search className="w-5 h-5" /></button>
+              {isAuthenticated ? (
+                <div className="flex gap-4">
+                  <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=100" className="w-12 h-12 rounded-full object-cover" alt="User" />
+                  <div className="flex-1">
+                    <textarea 
+                      placeholder="What's happening in your neighborhood?" 
+                      value={postContent}
+                      onChange={(e) => setPostContent(e.target.value)}
+                      className="w-full p-2 text-lg text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none resize-none bg-transparent"
+                      rows={2}
+                    />
+                    <div className="flex justify-between items-center mt-4">
+                      <div className="flex gap-4 text-primary">
+                        <button 
+                          onClick={() => navigate('/report')}
+                          className="p-2 hover:bg-primary/10 rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          <Plus className="w-5 h-5" />
+                          <span className="text-xs font-bold uppercase tracking-widest hidden sm:inline">Advanced Report</span>
+                        </button>
+                        <button className="p-2 hover:bg-primary/10 rounded-lg transition-colors"><MapIcon className="w-5 h-5" /></button>
+                      </div>
+                      <button 
+                        onClick={handleQuickPost}
+                        disabled={isPosting || !postContent.trim()}
+                        className="px-6 py-2.5 bg-primary text-white font-bold rounded-full text-sm disabled:opacity-50"
+                      >
+                        {isPosting ? 'Posting...' : 'Post'}
+                      </button>
                     </div>
-                    <button className="px-6 py-2.5 bg-primary text-white font-bold rounded-full text-sm">Post</button>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-4 space-y-3">
+                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                    <User className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">Sign in to report issues</p>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Join your community to post updates</p>
+                  </div>
+                  <button 
+                    onClick={() => navigate('/login')}
+                    className="px-8 py-2 bg-primary text-white text-xs font-black rounded-full hover:bg-blue-600 transition-all uppercase tracking-widest"
+                  >
+                    Sign In Now
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="flex border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-hide bg-white dark:bg-gray-950">
@@ -210,7 +337,7 @@ const HomeFeed: React.FC = () => {
             </div>
 
             <div className="bg-gray-50/30 dark:bg-gray-900/10">
-              {loading ? (
+              {authLoading || loading ? (
                 <div className="flex flex-col items-center justify-center p-20 space-y-4">
                   <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                   <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Loading city reports...</p>
@@ -219,9 +346,10 @@ const HomeFeed: React.FC = () => {
                 reports.map((report) => (
                   <FeedItem 
                     key={report._id}
+                    id={report._id || ''}
                     user={{ 
-                      name: report.user?.username || "Anonymous", 
-                      handle: `@${report.user?.username?.toLowerCase().replace(/\s/g, '') || "citizen"}`, 
+                      name: report.user?.name || "Anonymous", 
+                      handle: `@${report.user?.name?.toLowerCase().replace(/\s/g, '') || "citizen"}`, 
                       time: "Just now", 
                       avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=100" 
                     }}
@@ -230,6 +358,20 @@ const HomeFeed: React.FC = () => {
                     image={report.imageUrl !== 'no-photo.jpg' ? report.imageUrl : undefined}
                     engagement={{ likes: report.upvotes?.toString() || "0", comments: "0", shares: "0" }}
                     status={report.status.toUpperCase()}
+                    location={report.location?.formattedAddress}
+                    onEdit={(id) => navigate(`/edit-report/${id}`)}
+                    onVote={async (id) => {
+                      if (!isAuthenticated) return navigate('/login');
+                      try {
+                        const reportToVote = reports.find(r => r._id === id);
+                        if (reportToVote) {
+                          const updatedReport = await updateReport(id, { upvotes: (reportToVote.upvotes || 0) + 1 });
+                          setReports(reports.map(r => r._id === id ? updatedReport.data : r));
+                        }
+                      } catch (err) {
+                        console.error('Failed to vote:', err);
+                      }
+                    }}
                   />
                 ))
               ) : (
@@ -342,7 +484,7 @@ interface FeedItemProps {
   status: string;
 }
 
-const FeedItem = ({ user, category, tag, content, image, images, engagement, status }: FeedItemProps) => (
+const FeedItem = ({ id, user, category, tag, content, image, images, engagement, status, location, onEdit, onVote }: FeedItemProps & { id: string, location?: string, onEdit: (id: string) => void, onVote: (id: string) => void }) => (
   <div className="p-4 md:p-6 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors cursor-pointer group bg-white dark:bg-gray-950">
     <div className="flex gap-4">
       <img src={user.avatar} className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-white dark:border-gray-800 shadow-sm flex-shrink-0" alt={user.name} />
@@ -354,12 +496,29 @@ const FeedItem = ({ user, category, tag, content, image, images, engagement, sta
             <span className="text-gray-300 dark:text-gray-700 hidden sm:inline">·</span>
             <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400">{user.time}</span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             {tag && <span className="px-2 py-0.5 bg-orange-100/50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-[10px] font-black rounded uppercase tracking-wider">{tag}</span>}
             <span className={`px-2 py-0.5 ${status === 'PENDING' ? 'bg-orange-50 dark:bg-orange-900/10 text-orange-500 dark:text-orange-400' : 'bg-blue-50 dark:bg-blue-900/10 text-blue-500 dark:text-blue-400'} text-[10px] font-black rounded uppercase tracking-wider`}>{status}</span>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onEdit(id); }}
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-primary transition-all ml-1"
+              title="Edit Report"
+            >
+              <FileText className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
-        <p className="text-[10px] font-black text-primary/60 dark:text-blue-400/60 mb-2 tracking-widest uppercase">{category}</p>
+        <div className="flex items-center gap-1.5 mb-2">
+          <p className="text-[10px] font-black text-primary/60 dark:text-blue-400/60 tracking-widest uppercase">{category}</p>
+          {location && (
+            <>
+              <span className="text-gray-300 dark:text-gray-700">·</span>
+              <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase flex items-center gap-1">
+                <MapPin className="w-2.5 h-2.5" /> {location}
+              </p>
+            </>
+          )}
+        </div>
         <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-4 text-sm md:text-base">{content}</p>
         
         {image && <img src={image} className="rounded-2xl w-full h-[200px] sm:h-[320px] object-cover border border-gray-100 dark:border-gray-800 shadow-sm mb-4" alt="Report" />}
@@ -372,7 +531,12 @@ const FeedItem = ({ user, category, tag, content, image, images, engagement, sta
         )}
 
         <div className="flex justify-between max-w-sm text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors pt-2">
-          <button className="flex items-center gap-2 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"><Heart className="w-4 h-4" /> <span className="text-xs font-bold">{engagement.likes}</span></button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onVote(id); }}
+            className="flex items-center gap-2 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+          >
+            <Heart className="w-4 h-4" /> <span className="text-xs font-bold">{engagement.likes}</span>
+          </button>
           <button className="flex items-center gap-2 hover:text-primary dark:hover:text-blue-400 transition-colors"><MessageSquare className="w-4 h-4" /> <span className="text-xs font-bold">{engagement.comments}</span></button>
           <button className="flex items-center gap-2 hover:text-green-500 dark:hover:text-green-400 transition-colors"><Share2 className="w-4 h-4" /> <span className="text-xs font-bold">{engagement.shares}</span></button>
           <button className="flex items-center gap-2 hover:text-gray-900 dark:hover:text-white transition-colors"><Bookmark className="w-4 h-4" /></button>

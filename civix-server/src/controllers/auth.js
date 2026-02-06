@@ -65,6 +65,49 @@ exports.getMe = async (req, res, next) => {
   });
 };
 
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// @desc    Google Authentication
+// @route   POST /api/auth/google
+// @access  Public
+exports.googleAuth = async (req, res, next) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ success: false, message: 'Google ID token required' });
+    }
+
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name } = payload;
+
+    // Check if user exists
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // User doesn't exist, redirect frontend to signup with pre-filled info
+      return res.status(404).json({
+        success: false,
+        newUser: true,
+        email,
+        name,
+        message: 'User does not exist. Please create an account.'
+      });
+    }
+
+    sendTokenResponse(user, 200, res);
+  } catch (err) {
+    console.error('Google Auth Error:', err);
+    res.status(400).json({ success: false, error: 'Google authentication failed' });
+  }
+};
+
 // Get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {
   // Create token
