@@ -25,6 +25,16 @@ export const logout = () => {
   localStorage.removeItem('token');
 };
 
+export const toggleBookmark = async (reportId: string) => {
+  const response = await api.put(`/users/bookmark/${reportId}`);
+  return response.data;
+};
+
+export const getBookmarks = async () => {
+  const response = await api.get('/users/bookmarks');
+  return response.data;
+};
+
 export const googleAuth = async (idToken: string): Promise<AuthResponse & { newUser?: boolean; email?: string; name?: string }> => {
   const response = await api.post('/auth/google', { idToken });
   if (response.data.token) {

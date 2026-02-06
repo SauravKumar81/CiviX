@@ -4,7 +4,9 @@ const {
   getReport,
   createReport,
   updateReport,
-  deleteReport
+  deleteReport,
+  addComment,
+  shareReport
 } = require('../controllers/reports');
 
 const router = express.Router();
@@ -21,6 +23,10 @@ router
   .route('/:id')
   .get(getReport)
   .put(protect, upload.single('image'), updateReport)
+  .put(protect, upload.single('image'), updateReport)
   .delete(protect, deleteReport);
+
+router.route('/:id/comment').post(protect, addComment);
+router.route('/:id/share').post(protect, shareReport);
 
 module.exports = router;

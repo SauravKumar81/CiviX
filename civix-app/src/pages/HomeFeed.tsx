@@ -5,10 +5,11 @@ import {
   Menu, X, ChevronLeft, ChevronRight, Moon, Sun, MapPin
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { getReports, updateReport, createReport } from '../services/reportService';
+import { getReports, updateReport, createReport, addComment, shareReport } from '../services/reportService';
 import type { Report } from '../services/reportService';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { toggleBookmark, getBookmarks } from '../services/authService';
 
 const HomeFeed: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -23,7 +24,16 @@ const HomeFeed: React.FC = () => {
   const location = useLocation();
 
   const [activeFilter, setActiveFilter] = useState<'local' | 'global' | 'mine'>('global');
-  const [userLocation, setUserLocation] = useState<{ city?: string; state?: string } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ city?: string; state?: string; latitude?: number; longitude?: number } | null>(null);
+  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      getBookmarks().then(bookmarks => {
+        setBookmarkedIds(bookmarks.map((b: any) => typeof b === 'string' ? b : b._id));
+      }).catch(console.error);
+    }
+  }, [isAuthenticated]);
 
   const fetchReports = async (filterOverride?: 'local' | 'global' | 'mine') => {
     setLoading(true);
@@ -31,8 +41,14 @@ const HomeFeed: React.FC = () => {
       const filter = filterOverride || activeFilter;
       let filters: any = {};
       
-      if (filter === 'local' && userLocation) {
-        filters = { city: userLocation.city, state: userLocation.state };
+      if (filter === 'local' && userLocation && userLocation.latitude && userLocation.longitude) {
+        filters = { 
+          lat: userLocation.latitude, 
+          lng: userLocation.longitude 
+        };
+      } else if (filter === 'local' && userLocation?.city) {
+         // Fallback to City string if no coords
+         filters = { city: userLocation.city, state: userLocation.state };
       } else if (filter === 'mine' && user?.id) {
         filters = { user: user.id };
       }
@@ -56,7 +72,9 @@ const HomeFeed: React.FC = () => {
         const address = data.address;
         const location = {
           city: address.city || address.town || address.village,
-          state: address.state
+          state: address.state,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
         };
         setUserLocation(location);
         // We don't automatically trigger fetch here to avoid double loading on mount,
@@ -356,9 +374,12 @@ const HomeFeed: React.FC = () => {
                     category={report.category.toUpperCase()}
                     content={report.description}
                     image={report.imageUrl !== 'no-photo.jpg' ? report.imageUrl : undefined}
-                    engagement={{ likes: report.upvotes?.toString() || "0", comments: "0", shares: "0" }}
+                    engagement={{ likes: report.upvotes?.toString() || "0", comments: report.comments?.length.toString() || "0", shares: report.shares?.toString() || "0" }}
                     status={report.status.toUpperCase()}
                     location={report.location?.formattedAddress}
+                    userLocation={userLocation && userLocation.latitude && userLocation.longitude ? { latitude: userLocation.latitude, longitude: userLocation.longitude } : null}
+                    reportCoordinates={report.location?.coordinates}
+                    comments={report.comments}
                     onEdit={(id) => navigate(`/edit-report/${id}`)}
                     onVote={async (id) => {
                       if (!isAuthenticated) return navigate('/login');
@@ -370,6 +391,36 @@ const HomeFeed: React.FC = () => {
                         }
                       } catch (err) {
                         console.error('Failed to vote:', err);
+                      }
+                    }}
+                    onComment={async (id, text) => {
+                      if (!isAuthenticated) return navigate('/login');
+                      try {
+                        const updatedReport = await addComment(id, text);
+                        setReports(reports.map(r => r._id === id ? updatedReport.data : r));
+                      } catch (err) {
+                        console.error('Failed to comment:', err);
+                      }
+                    }}
+                    onShare={async (id) => {
+                      try {
+                        const updatedReport = await shareReport(id);
+                        setReports(reports.map(r => r._id === id ? updatedReport.data : r));
+                        // Show simple feedback
+                        alert("Report shared!"); 
+                      } catch (err) {
+                        console.error('Failed to share:', err);
+                      }
+                    }}
+                    isBookmarked={bookmarkedIds.includes(report._id!)}
+                    onBookmark={async (id) => {
+                      if (!isAuthenticated) return navigate('/login');
+                      try {
+                        const updatedBookmarks = await toggleBookmark(id);
+                        // Backend returns updated user bookmarks array, but IDs might be just strings
+                        setBookmarkedIds(updatedBookmarks.data.map((b: any) => typeof b === 'string' ? b : b._id));
+                      } catch (err) {
+                        console.error('Failed to bookmark:', err);
                       }
                     }}
                   />
@@ -482,69 +533,147 @@ interface FeedItemProps {
     shares: string;
   };
   status: string;
+  userLocation: { latitude: number, longitude: number } | null;
+  reportCoordinates?: [number, number];
+  comments?: {
+    user: string;
+    userName: string;
+    text: string;
+    createdAt: string;
+  }[];
+  isBookmarked?: boolean;
 }
 
-const FeedItem = ({ id, user, category, tag, content, image, images, engagement, status, location, onEdit, onVote }: FeedItemProps & { id: string, location?: string, onEdit: (id: string) => void, onVote: (id: string) => void }) => (
-  <div className="p-4 md:p-6 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors cursor-pointer group bg-white dark:bg-gray-950">
-    <div className="flex gap-4">
-      <img src={user.avatar} className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-white dark:border-gray-800 shadow-sm flex-shrink-0" alt={user.name} />
-      <div className="flex-1 min-w-0">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-1 gap-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-gray-900 dark:text-white hover:underline truncate">{user.name}</span>
-            <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate">{user.handle}</span>
-            <span className="text-gray-300 dark:text-gray-700 hidden sm:inline">·</span>
-            <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400">{user.time}</span>
+const FeedItem = ({ id, user, category, tag, content, image, images, engagement, status, location, userLocation, reportCoordinates, comments, isBookmarked, onEdit, onVote, onComment, onShare, onBookmark }: FeedItemProps & { id: string, location?: string, onEdit: (id: string) => void, onVote: (id: string) => void, onComment: (id: string, text: string) => void, onShare: (id: string) => void, onBookmark: (id: string) => void }) => {
+  const [showComments, setShowComments] = useState(false);
+  const [commentText, setCommentText] = useState('');
+
+  const handleCommentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim()) return;
+    onComment(id, commentText);
+    setCommentText('');
+  };
+
+  return (
+    <div className="p-4 md:p-6 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors cursor-pointer group bg-white dark:bg-gray-950">
+      <div className="flex gap-4">
+        <img src={user.avatar} className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-white dark:border-gray-800 shadow-sm flex-shrink-0" alt={user.name} />
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-1 gap-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-gray-900 dark:text-white hover:underline truncate">{user.name}</span>
+              <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate">{user.handle}</span>
+              <span className="text-gray-300 dark:text-gray-700 hidden sm:inline">·</span>
+              <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400">{user.time}</span>
+            </div>
+            <div className="flex gap-2 items-center">
+              {tag && <span className="px-2 py-0.5 bg-orange-100/50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-[10px] font-black rounded uppercase tracking-wider">{tag}</span>}
+              <span className={`px-2 py-0.5 ${status === 'PENDING' ? 'bg-orange-50 dark:bg-orange-900/10 text-orange-500 dark:text-orange-400' : 'bg-blue-50 dark:bg-blue-900/10 text-blue-500 dark:text-blue-400'} text-[10px] font-black rounded uppercase tracking-wider`}>{status}</span>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onEdit(id); }}
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-primary transition-all ml-1"
+                title="Edit Report"
+              >
+                <FileText className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
-          <div className="flex gap-2 items-center">
-            {tag && <span className="px-2 py-0.5 bg-orange-100/50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-[10px] font-black rounded uppercase tracking-wider">{tag}</span>}
-            <span className={`px-2 py-0.5 ${status === 'PENDING' ? 'bg-orange-50 dark:bg-orange-900/10 text-orange-500 dark:text-orange-400' : 'bg-blue-50 dark:bg-blue-900/10 text-blue-500 dark:text-blue-400'} text-[10px] font-black rounded uppercase tracking-wider`}>{status}</span>
+          <div className="flex items-center gap-1.5 mb-2">
+            <p className="text-[10px] font-black text-primary/60 dark:text-blue-400/60 tracking-widest uppercase">{category}</p>
+            {location && (
+              <>
+                <span className="text-gray-300 dark:text-gray-700">·</span>
+                <LocationBadge location={location} userLocation={userLocation} coordinates={reportCoordinates} />
+              </>
+            )}
+          </div>
+          <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-4 text-sm md:text-base">{content}</p>
+          
+          {image && <img src={image} className="rounded-2xl w-full h-[200px] sm:h-[320px] object-cover border border-gray-100 dark:border-gray-800 shadow-sm mb-4" alt="Report" />}
+          {images && (
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {images.map((img: string, i: number) => (
+                <img key={i} src={img} className="rounded-2xl w-full h-[150px] sm:h-[240px] object-cover border border-gray-100 dark:border-gray-800 shadow-sm" alt="Report" />
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-between max-w-sm text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors pt-2 border-t border-gray-50 dark:border-gray-900">
             <button 
-              onClick={(e) => { e.stopPropagation(); onEdit(id); }}
-              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-primary transition-all ml-1"
-              title="Edit Report"
+              onClick={(e) => { e.stopPropagation(); onVote(id); }}
+              className="flex items-center gap-2 hover:text-blue-500 dark:hover:text-blue-400 transition-colors py-2"
             >
-              <FileText className="w-3.5 h-3.5" />
+              <Heart className="w-4 h-4" /> <span className="text-xs font-bold">{engagement.likes}</span>
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
+              className={`flex items-center gap-2 hover:text-primary dark:hover:text-blue-400 transition-colors py-2 ${showComments ? 'text-primary dark:text-blue-400' : ''}`}
+            >
+              <MessageSquare className="w-4 h-4" /> <span className="text-xs font-bold">{comments ? comments.length : engagement.comments}</span>
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onShare(id); }}
+              className="flex items-center gap-2 hover:text-green-500 dark:hover:text-green-400 transition-colors py-2"
+            >
+              <Share2 className="w-4 h-4" /> <span className="text-xs font-bold">{engagement.shares}</span>
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onBookmark(id); }}
+              className={`flex items-center gap-2 transition-colors py-2 ${isBookmarked ? 'text-purple-500 dark:text-purple-400' : 'hover:text-gray-900 dark:hover:text-white'}`}
+            >
+              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
             </button>
           </div>
-        </div>
-        <div className="flex items-center gap-1.5 mb-2">
-          <p className="text-[10px] font-black text-primary/60 dark:text-blue-400/60 tracking-widest uppercase">{category}</p>
-          {location && (
-            <>
-              <span className="text-gray-300 dark:text-gray-700">·</span>
-              <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase flex items-center gap-1">
-                <MapPin className="w-2.5 h-2.5" /> {location}
-              </p>
-            </>
-          )}
-        </div>
-        <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-4 text-sm md:text-base">{content}</p>
-        
-        {image && <img src={image} className="rounded-2xl w-full h-[200px] sm:h-[320px] object-cover border border-gray-100 dark:border-gray-800 shadow-sm mb-4" alt="Report" />}
-        {images && (
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {images.map((img: string, i: number) => (
-              <img key={i} src={img} className="rounded-2xl w-full h-[150px] sm:h-[240px] object-cover border border-gray-100 dark:border-gray-800 shadow-sm" alt="Report" />
-            ))}
-          </div>
-        )}
 
-        <div className="flex justify-between max-w-sm text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors pt-2">
-          <button 
-            onClick={(e) => { e.stopPropagation(); onVote(id); }}
-            className="flex items-center gap-2 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
-          >
-            <Heart className="w-4 h-4" /> <span className="text-xs font-bold">{engagement.likes}</span>
-          </button>
-          <button className="flex items-center gap-2 hover:text-primary dark:hover:text-blue-400 transition-colors"><MessageSquare className="w-4 h-4" /> <span className="text-xs font-bold">{engagement.comments}</span></button>
-          <button className="flex items-center gap-2 hover:text-green-500 dark:hover:text-green-400 transition-colors"><Share2 className="w-4 h-4" /> <span className="text-xs font-bold">{engagement.shares}</span></button>
-          <button className="flex items-center gap-2 hover:text-gray-900 dark:hover:text-white transition-colors"><Bookmark className="w-4 h-4" /></button>
+          {/* Comments Section */}
+          {showComments && (
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 animate-in slide-in-from-top-2" onClick={(e) => e.stopPropagation()}>
+              
+              {/* Comment List */}
+              {comments && comments.length > 0 && (
+                <div className="space-y-3 mb-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                  {comments.map((comment, idx) => (
+                    <div key={idx} className="flex gap-2 text-sm">
+                      <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-gray-500">
+                        {comment.userName?.charAt(0) || 'U'}
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-900 p-2.5 rounded-2xl rounded-tl-none">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-bold text-gray-900 dark:text-white text-xs">{comment.userName}</span>
+                          <span className="text-[10px] text-gray-400">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-gray-700 dark:text-gray-300 leading-snug">{comment.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Input */}
+              <form onSubmit={handleCommentSubmit} className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Write a comment..." 
+                  className="flex-1 bg-gray-100 dark:bg-gray-900 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                />
+                <button 
+                  type="submit"
+                  disabled={!commentText.trim()}
+                  className="p-2 bg-primary text-white rounded-xl disabled:opacity-50 hover:bg-blue-600 transition-colors"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const TrendingItem = ({ category, tag, reports }: { category: string, tag: string, reports: string }) => (
   <button className="w-full text-left p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors space-y-0.5">

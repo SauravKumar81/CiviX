@@ -7,21 +7,77 @@ exports.getReports = async (req, res, next) => {
   try {
     const query = {};
 
-    // Filter by city/state if provided
-    if (req.query.city) {
+    // Filter by city/state if provided (Legacy / Fallback)
+    if (req.query.city && !req.query.lat) {
       query['location.city'] = req.query.city;
     }
-    if (req.query.state) {
+    if (req.query.state && !req.query.lat) {
       query['location.state'] = req.query.state;
     }
     if (req.query.user) {
       query.user = req.query.user;
     }
 
-    const reports = await Report.find(query).sort({ createdAt: -1 }).populate({
+    // Geospatial Query ($near)
+    if (req.query.lat && req.query.lng) {
+      const lat = parseFloat(req.query.lat);
+      const lng = parseFloat(req.query.lng);
+      query['location.coordinates'] = {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [lng, lat]
+          },
+          $maxDistance: 10000 // 10km radius
+        }
+      };
+    }
+
+    let reports = await Report.find(query).populate({
       path: 'user',
       select: 'name rank'
     });
+
+    // Text Search
+    if (req.query.q) {
+      const regex = new RegExp(req.query.q, 'i');
+      query.$or = [
+        { title: regex },
+        { description: regex },
+        { category: regex }
+      ];
+    }
+
+    // Sort Filter
+    if (req.query.sort === 'official') {
+      query.isVerified = true;
+    }
+
+    let reports = await Report.find(query).populate({
+      path: 'user',
+      select: 'name rank'
+    });
+
+    // Custom Sorting Logic
+    if (req.query.sort === 'trending') {
+      reports.sort((a, b) => {
+        const scoreA = (a.upvotes || 0) + (a.shares || 0) * 2 + (a.comments ? a.comments.length : 0);
+        const scoreB = (b.upvotes || 0) + (b.shares || 0) * 2 + (b.comments ? b.comments.length : 0);
+        return scoreB - scoreA;
+      });
+    } else if (req.query.sort === 'newest') {
+      reports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    } else if (req.query.lat && req.query.lng) {
+        // Geospatial sort happens implicitly or via our previous custom sort
+        reports.sort((a, b) => {
+            const scoreA = (a.isVerified ? 100 : 0) + (a.upvotes || 0) + (a.shares || 0) * 2;
+            const scoreB = (b.isVerified ? 100 : 0) + (b.upvotes || 0) + (b.shares || 0) * 2;
+            return scoreB - scoreA;
+        });
+    } else {
+        // Default: Newest
+        reports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
 
     res.status(200).json({
       success: true,
@@ -173,5 +229,59 @@ exports.deleteReport = async (req, res, next) => {
     });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
+  }
+};
+
+// @desc    Add comment to report
+// @route   POST /api/reports/:id/comment
+// @access  Private
+exports.addComment = async (req, res, next) => {
+  try {
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Report not found' });
+    }
+
+    const comment = {
+      user: req.user.id,
+      userName: req.user.name,
+      text: req.body.text
+    };
+
+    report.comments.unshift(comment);
+
+    await report.save();
+
+    res.status(200).json({
+      success: true,
+      data: report
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// @desc    Share report
+// @route   POST /api/reports/:id/share
+// @access  Private
+exports.shareReport = async (req, res, next) => {
+  try {
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Report not found' });
+    }
+
+    report.shares = (report.shares || 0) + 1;
+
+    await report.save();
+
+    res.status(200).json({
+      success: true,
+      data: report
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 };

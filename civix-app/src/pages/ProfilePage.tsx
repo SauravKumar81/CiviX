@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getReports } from '../services/reportService';
+import { getBookmarks } from '../services/authService';
 import type { Report } from '../services/reportService';
 import { 
   MapPin, Calendar, Award, TrendingUp, FileText, 
-  Settings, LogOut, ChevronLeft, Shield, CheckCircle2
+  Settings, LogOut, ChevronLeft, Shield, CheckCircle2, Bookmark
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const ProfilePage: React.FC = () => {
   const { user, logout } = useAuth();
   const [myReports, setMyReports] = useState<Report[]>([]);
+  const [savedReports, setSavedReports] = useState<Report[]>([]);
+  const [activeTab, setActiveTab] = useState<'my_reports' | 'saved'>('my_reports');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -18,10 +21,16 @@ const ProfilePage: React.FC = () => {
     const fetchUserData = async () => {
       if (user?.id) {
         try {
+          // Fetch my reports
           const data = await getReports({ user: user.id });
           setMyReports(data.data);
+          
+          // Fetch saved reports
+          const bookmarks = await getBookmarks();
+          // getBookmarks returns user.bookmarks (populated reports)
+          setSavedReports(bookmarks.data); 
         } catch (error) {
-          console.error("Failed to fetch user reports", error);
+          console.error("Failed to fetch user data", error);
         } finally {
           setLoading(false);
         }
@@ -120,18 +129,35 @@ const ProfilePage: React.FC = () => {
            />
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-6 border-b border-gray-100 dark:border-gray-800 mb-6">
+           <button 
+             onClick={() => setActiveTab('my_reports')}
+             className={`pb-3 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${activeTab === 'my_reports' ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-600 dark:hover:text-gray-300'}`}
+           >
+              My Activity
+           </button>
+           <button 
+             onClick={() => setActiveTab('saved')}
+             className={`pb-3 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${activeTab === 'saved' ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-600 dark:hover:text-gray-300'}`}
+           >
+              Saved Reports
+           </button>
+        </div>
+
         <h2 className="text-xl font-black text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-           <FileText className="text-gray-400" /> Resolution History
+           {activeTab === 'my_reports' ? <FileText className="text-gray-400" /> : <Bookmark className="text-gray-400" />} 
+           {activeTab === 'my_reports' ? 'Resolution History' : 'Saved Issues'}
         </h2>
 
         {loading ? (
            <div className="flex justify-center py-20">
              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
            </div>
-        ) : myReports.length > 0 ? (
+        ) : (activeTab === 'my_reports' ? myReports : savedReports).length > 0 ? (
            <div className="space-y-4">
-              {myReports.map(report => (
-                <div key={report._id} className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 flex gap-4 transition-transform hover:scale-[1.01] cursor-pointer">
+              {(activeTab === 'my_reports' ? myReports : savedReports).map(report => (
+                <div key={report._id} className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 flex gap-4 transition-transform hover:scale-[1.01] cursor-pointer" onClick={() => navigate(`/edit-report/${report._id}`)}>
                    <img 
                      src={report.imageUrl !== 'no-photo.jpg' ? report.imageUrl : "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=200"} 
                      className="w-20 h-20 rounded-xl object-cover" 
@@ -162,7 +188,7 @@ const ProfilePage: React.FC = () => {
                  <FileText className="text-gray-400" />
               </div>
               <h3 className="font-bold text-gray-900 dark:text-white">No reports yet</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Submit your first civic issue today!</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{activeTab === 'my_reports' ? "Submit your first civic issue today!" : "Bookmark important issues to see them here."}</p>
            </div>
         )}
       </div>

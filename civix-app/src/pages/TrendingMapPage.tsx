@@ -32,6 +32,8 @@ const TrendingMapPage: React.FC = () => {
   const [userCity, setUserCity] = useState<string>("Locating...");
   const [mapLayer, setMapLayer] = useState<'standard' | 'satellite' | 'dark'>('standard');
   const [showLayerMenu, setShowLayerMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'trending' | 'neighborhoods' | 'official'>('trending');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -49,14 +51,22 @@ const TrendingMapPage: React.FC = () => {
     L.Marker.prototype.options.icon = DefaultIcon;
 
     const fetchReports = async () => {
+      setLoading(true);
       try {
-        const data = await getReports();
+        let params: any = { q: searchQuery };
+        
+        if (activeFilter === 'trending') {
+          params.sort = 'trending';
+        } else if (activeFilter === 'official') {
+          params.sort = 'official';
+        } else if (activeFilter === 'neighborhoods' && userPos) {
+          params.lat = userPos[0];
+          params.lng = userPos[1];
+        }
+
+        const data = await getReports(params);
         const reportsList = data.data;
         setReports(reportsList);
-        if (reportsList.length > 0) {
-          // Keep selection null initially so we can focus on user location provided below
-          // setSelectedReport(reportsList[0]); 
-        }
       } catch (error) {
         console.error('Error fetching reports for map:', error);
       } finally {
@@ -65,8 +75,8 @@ const TrendingMapPage: React.FC = () => {
     };
 
     // Auto-detect location & City Name
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+    if (navigator.geolocation && !userPos) {
+           navigator.geolocation.getCurrentPosition(
         async (position) => {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
@@ -86,8 +96,12 @@ const TrendingMapPage: React.FC = () => {
       );
     }
 
-    fetchReports();
-  }, []);
+    const timer = setTimeout(() => {
+        fetchReports();
+    }, 500); // Debounce search
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, activeFilter, userPos]); // userPos dependency ensures re-fetch once location is found for neighborhoods
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 font-sans overflow-hidden transition-colors duration-300">
@@ -117,7 +131,7 @@ const TrendingMapPage: React.FC = () => {
                 <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Explore Issues</h1>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest">Seattle • Live Updates</p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest">{userCity} • Live Updates</p>
                 </div>
               </div>
             </div>
@@ -144,6 +158,8 @@ const TrendingMapPage: React.FC = () => {
               <input 
                 type="text" 
                 placeholder="Search districts, issues..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full h-12 bg-gray-50 dark:bg-gray-800 border-2 border-transparent rounded-2xl pl-12 pr-4 text-sm font-medium focus:bg-white dark:focus:bg-gray-700 focus:border-primary outline-none transition-all text-gray-900 dark:text-white placeholder:text-gray-400"
               />
             </div>
@@ -184,7 +200,7 @@ const TrendingMapPage: React.FC = () => {
                       ).map(r => (
                         <div key={r._id} onClick={() => setSelectedReport(r)} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:scale-105 transition-transform cursor-pointer">
                            <h4 className="font-bold text-gray-900 dark:text-white text-sm line-clamp-1">{r.title}</h4>
-                           <p className="text-[10px] text-gray-500 mt-1 flex items-center gap-1"><MapIcon size={8}/> {r.location?.formattedAddress || 'Nearby'}</p>
+                           <p className="text-xs text-gray-500 mt-1 flex items-center gap-1"><MapIcon size={8}/> {r.location?.formattedAddress || 'Nearby'}</p>
                         </div>
                       ))}
                    </div>
@@ -307,9 +323,15 @@ const TrendingMapPage: React.FC = () => {
           {/* Floating Search Hub (Desktop/Bottom Left) */}
           <div className="absolute bottom-6 left-6 z-[400] flex gap-2 pointer-events-none">
              <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-2 rounded-2xl border border-white/50 dark:border-gray-800/50 shadow-2xl flex gap-2 pointer-events-auto">
-               <FilterTab icon={<TrendingUp size={12} />} label="Trending" active />
-               <FilterTab icon={<Users size={12} />} label="Neighborhoods" />
-               <FilterTab icon={<Shield size={12} />} label="Official" />
+               <div onClick={() => setActiveFilter('trending')}>
+                 <FilterTab icon={<TrendingUp size={12} />} label="Trending" active={activeFilter === 'trending'} />
+               </div>
+               <div onClick={() => setActiveFilter('neighborhoods')}>
+                 <FilterTab icon={<Users size={12} />} label="Neighborhoods" active={activeFilter === 'neighborhoods'} />
+               </div>
+               <div onClick={() => setActiveFilter('official')}>
+                 <FilterTab icon={<Shield size={12} />} label="Official" active={activeFilter === 'official'} />
+               </div>
              </div>
           </div>
 

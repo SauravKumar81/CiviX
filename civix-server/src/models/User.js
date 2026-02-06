@@ -37,7 +37,11 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  bookmarks: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'Report'
+  }]
 });
 
 // Encrypt password using bcrypt

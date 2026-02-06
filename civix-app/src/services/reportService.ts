@@ -22,9 +22,16 @@ export interface Report {
   upvotes?: number;
   isVerified?: boolean;
   createdAt?: string;
+  comments?: {
+    user: string;
+    userName: string;
+    text: string;
+    createdAt: string;
+  }[];
+  shares?: number;
 }
 
-export const getReports = async (filters?: { city?: string; state?: string; user?: string }) => {
+export const getReports = async (filters?: { city?: string; state?: string; user?: string; lat?: number; lng?: number; q?: string; sort?: string }) => {
   const response = await api.get('/reports', { params: filters });
   return response.data;
 };
@@ -46,5 +53,15 @@ export const updateReport = async (id: string, reportData: Partial<Report> | For
 
 export const deleteReport = async (id: string) => {
   const response = await api.delete(`/reports/${id}`);
+  return response.data;
+};
+
+export const addComment = async (id: string, text: string) => {
+  const response = await api.post(`/reports/${id}/comment`, { text });
+  return response.data;
+};
+
+export const shareReport = async (id: string) => {
+  const response = await api.post(`/reports/${id}/share`);
   return response.data;
 };

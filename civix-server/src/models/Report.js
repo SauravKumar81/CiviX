@@ -56,6 +56,27 @@ const reportSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  shares: {
+    type: Number,
+    default: 0
+  },
+  comments: [{
+    user: {
+      type: mongoose.Schema.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    userName: String, // Denormalize for easier access
+    userAvatar: String,
+    text: {
+      type: String,
+      required: true
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   isVerified: {
     type: Boolean,
     default: false
