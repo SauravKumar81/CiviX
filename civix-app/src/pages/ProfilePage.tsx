@@ -119,6 +119,11 @@ const ProfilePage: React.FC = () => {
   };
 
   // Gamification Stats
+  const myReports = reports;
+  const listReports = activeTab === 'reports' ? reports : []; // Rename logic slightly if needed, but for now alias
+  // Logic for saved reports is currently placeholder
+  const savedReports: Report[] = []; 
+
   const totalReports = myReports.length;
   const resolvedReports = myReports.filter(r => r.status === 'resolved').length;
   const totalUpvotes = myReports.reduce((acc, curr) => acc + (curr.upvotes || 0), 0);
