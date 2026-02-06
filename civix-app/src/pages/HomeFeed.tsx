@@ -216,7 +216,7 @@ const HomeFeed: React.FC = () => {
             label="Profile" 
             active={location.pathname === '/profile'}
             collapsed={isSidebarCollapsed} 
-            onClick={() => navigate('/')} 
+            onClick={() => navigate('/profile')} 
           />
         </nav>
 
@@ -559,5 +559,64 @@ const CheckCircle2 = ({ className }: { className?: string }) => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
   </svg>
 );
+
+// Utility for consistent city colors
+const getCityColor = (city: string) => {
+  const colors = [
+    'bg-emerald-500 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400', 
+    'bg-blue-500 border-blue-200 text-blue-700 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-400', 
+    'bg-purple-500 border-purple-200 text-purple-700 dark:bg-purple-500/10 dark:border-purple-500/20 dark:text-purple-400', 
+    'bg-orange-500 border-orange-200 text-orange-700 dark:bg-orange-500/10 dark:border-orange-500/20 dark:text-orange-400', 
+    'bg-pink-500 border-pink-200 text-pink-700 dark:bg-pink-500/10 dark:border-pink-500/20 dark:text-pink-400', 
+    'bg-cyan-500 border-cyan-200 text-cyan-700 dark:bg-cyan-500/10 dark:border-cyan-500/20 dark:text-cyan-400'
+  ];
+  let hash = 0;
+  for (let i = 0; i < city.length; i++) hash = city.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+};
+
+// Haversine Distance Calculation
+const calculateDistance = (lat1: number, lon1: number, lat2?: number, lon2?: number) => {
+  if (!lat2 || !lon2) return null;
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const d = R * c * 0.621371; // Convert to miles
+  return d < 0.1 ? 'Nearby' : `${d.toFixed(1)} mi away`;
+};
+
+const LocationBadge = ({ location, userLocation, coordinates }: { location: string, userLocation: { latitude: number, longitude: number } | null, coordinates?: [number, number] }) => {
+  if (!location) return null;
+  
+  // Extract city/neighborhood roughly (simplified)
+  const city = location.split(',')[0].trim();
+  const colorClass = getCityColor(city);
+  
+  let distanceStr = null;
+  if (userLocation && coordinates && coordinates.length === 2) {
+    // Assuming coordinates are [lon, lat] from GeoJSON
+    distanceStr = calculateDistance(userLocation.latitude, userLocation.longitude, coordinates[1], coordinates[0]);
+  }
+
+  return (
+    <div className={`flex items-center gap-2 px-2.5 py-1 rounded-full border ${colorClass} transition-all hover:scale-105`}>
+      <div className="relative flex items-center justify-center w-2 h-2">
+         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75"></span>
+         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-current"></span>
+      </div>
+      <span className="text-[10px] font-black uppercase tracking-wider">{city}</span>
+      {distanceStr && (
+        <>
+          <span className="w-0.5 h-2 bg-current opacity-30"></span>
+          <span className="text-[9px] font-bold opacity-80">{distanceStr}</span>
+        </>
+      )}
+    </div>
+  );
+};
 
 export default HomeFeed;

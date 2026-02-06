@@ -8,6 +8,7 @@ import ReportIssuePage from './pages/ReportIssuePage';
 import TrendingMapPage from './pages/TrendingMapPage';
 import EditReportPage from './pages/EditReportPage';
 import LogoutConfirmationPage from './pages/LogoutConfirmationPage';
+import ProfilePage from './pages/ProfilePage';
 
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -57,6 +58,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <EditReportPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
                   </ProtectedRoute>
                 } 
               />
