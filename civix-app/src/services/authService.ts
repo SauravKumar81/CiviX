@@ -51,3 +51,8 @@ export const getMe = async () => {
 export const isAuthenticated = () => {
   return !!localStorage.getItem('token');
 };
+
+export const followUser = (id: string) => api.put(`/users/follow/${id}`);
+export const unfollowUser = (id: string) => api.put(`/users/unfollow/${id}`);
+export const getPublicProfile = (id: string) => api.get(`/users/${id}`);
+export const updateProfile = (data: any) => api.put('/users/profile', data);

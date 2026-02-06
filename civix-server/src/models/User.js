@@ -41,7 +41,26 @@ const userSchema = new mongoose.Schema({
   bookmarks: [{
     type: mongoose.Schema.ObjectId,
     ref: 'Report'
-  }]
+  }],
+  followers: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  }],
+  following: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  }],
+  bio: {
+    type: String,
+    maxlength: [500, 'Bio can not be more than 500 characters']
+  },
+  avatar: {
+    type: String,
+    default: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=100' // Default avatar
+  },
+  location: {
+    type: String
+  }
 });
 
 // Encrypt password using bcrypt

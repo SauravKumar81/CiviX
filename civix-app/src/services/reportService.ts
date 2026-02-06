@@ -29,6 +29,7 @@ export interface Report {
     createdAt: string;
   }[];
   shares?: number;
+  tags?: string[];
 }
 
 export const getReports = async (filters?: { city?: string; state?: string; user?: string; lat?: number; lng?: number; q?: string; sort?: string }) => {

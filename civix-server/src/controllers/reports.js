@@ -1,5 +1,7 @@
 const Report = require('../models/Report');
 
+const User = require('../models/User'); // Ensure User model is required
+
 // @desc    Get all reports
 // @route   GET /api/reports
 // @access  Public
@@ -18,6 +20,17 @@ exports.getReports = async (req, res, next) => {
       query.user = req.query.user;
     }
 
+    // Filter by Following
+    if (req.query.following === 'true' && req.user) {
+         const currentUser = await User.findById(req.user.id);
+         if (currentUser && currentUser.following.length > 0) {
+             query.user = { $in: currentUser.following };
+         } else {
+             // If following no one, return nothing for this filter
+             return res.status(200).json({ success: true, count: 0, data: [] });
+         }
+    }
+
     // Geospatial Query ($near)
     if (req.query.lat && req.query.lng) {
       const lat = parseFloat(req.query.lat);
@@ -33,10 +46,6 @@ exports.getReports = async (req, res, next) => {
       };
     }
 
-    let reports = await Report.find(query).populate({
-      path: 'user',
-      select: 'name rank'
-    });
 
     // Text Search
     if (req.query.q) {
@@ -143,6 +152,16 @@ exports.createReport = async (req, res, next) => {
       } catch (e) {
         console.error('Location parsing error:', e);
       }
+    }
+
+    // Extract hashtags from description
+    if (reportData.description) {
+      reportData.tags = (reportData.description.match(/#[a-z0-9_]+/gi) || []).map(tag => tag.substring(1)); // remove #
+    }
+
+    // Extract hashtags from description
+    if (reportData.description) {
+      reportData.tags = (reportData.description.match(/#[a-z0-9_]+/gi) || []).map(tag => tag.substring(1)); // remove #
     }
 
     console.log('Final Report Data:', reportData);

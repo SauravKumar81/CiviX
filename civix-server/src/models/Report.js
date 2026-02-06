@@ -25,12 +25,16 @@ const reportSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'in-progress', 'resolved'],
+    enum: ['pending', 'in-progress', 'resolved', 'rejected'],
     default: 'pending'
+  },
+  tags: {
+    type: [String],
+    default: []
   },
   imageUrl: {
     type: String,
-    default: 'no-photo.jpg'
+    default: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=2938&ixlib=rb-4.0.3'
   },
   location: {
     // GeoJSON Point
