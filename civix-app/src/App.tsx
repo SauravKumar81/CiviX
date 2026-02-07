@@ -9,6 +9,7 @@ import TrendingMapPage from './pages/TrendingMapPage';
 import EditReportPage from './pages/EditReportPage';
 import LogoutConfirmationPage from './pages/LogoutConfirmationPage';
 import ProfilePage from './pages/ProfilePage';
+import ProfileSetupPage from './pages/ProfileSetupPage';
 
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -43,6 +44,15 @@ function App() {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route 
+                path="/profile-setup" 
+                element={
+                  <ProtectedRoute>
+                    <ProfileSetupPage />
+                  </ProtectedRoute>
+                } 
+              />
               <Route path="/" element={<HomeFeed />} />
               <Route 
                 path="/report" 

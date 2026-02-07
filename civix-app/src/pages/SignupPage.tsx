@@ -41,7 +41,7 @@ const SignupPage: React.FC = () => {
       const response = await register({ name, email, password });
       if (response.token) {
         authLogin(response.token);
-        navigate('/');
+        navigate('/profile-setup');
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');

@@ -20,7 +20,12 @@ const reportSchema = new mongoose.Schema({
       'Public Safety',
       'Environment',
       'Mobility',
-      'Other'
+      'Other',
+      'Car',
+      'Road',
+      'Building',
+      'Dirty',
+      'Public Issue'
     ]
   },
   status: {
