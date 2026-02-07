@@ -1,33 +1,51 @@
-import React from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import React, { useState } from 'react';
+import { Marker, Popup } from 'react-map-gl';
 import type { Report } from '../services/reportService';
+import { MapPin } from 'lucide-react';
 
-// --- Sub-components (Moved here to satisfy React Fast Refresh) ---
+// --- Sub-components ---
 
 export const ReportMarker = ({ report, onClick }: { report: Report; onClick: () => void }) => {
-  const position: [number, number] = [report.location.coordinates[1], report.location.coordinates[0]];
-  
+  const [showPopup, setShowPopup] = useState(false);
+
   return (
-    <Marker 
-      position={position} 
-      eventHandlers={{
-        click: onClick
-      }}
-    >
-      <Popup className="custom-popup">
-        <div className="p-2 min-w-[150px]">
-          <h4 className="font-bold text-sm mb-1">{report.title}</h4>
-          <p className="text-[10px] text-gray-500 line-clamp-2">{report.description}</p>
-          <span className={`text-[8px] font-black uppercase mt-2 inline-block px-1.5 py-0.5 rounded ${
-            report.status === 'pending' ? 'bg-red-100 text-red-600' : 
-            report.status === 'in-progress' ? 'bg-orange-100 text-orange-600' :
-            'bg-emerald-100 text-emerald-600'
-          }`}>
-            {report.status}
-          </span>
-        </div>
-      </Popup>
-    </Marker>
+    <>
+      <Marker
+        longitude={report.location.coordinates[0]}
+        latitude={report.location.coordinates[1]}
+        anchor="bottom"
+        onClick={e => {
+          e.originalEvent.stopPropagation();
+          onClick();
+          setShowPopup(true);
+        }}
+      >
+        <MapPin className="text-primary w-8 h-8 fill-primary/20 hover:scale-110 transition-transform cursor-pointer" />
+      </Marker>
+
+      {showPopup && (
+        <Popup
+          longitude={report.location.coordinates[0]}
+          latitude={report.location.coordinates[1]}
+          anchor="top"
+          onClose={() => setShowPopup(false)}
+          closeOnClick={false}
+          className="custom-popup"
+        >
+          <div className="p-2 min-w-[150px]">
+            <h4 className="font-bold text-sm mb-1 text-gray-900">{report.title}</h4>
+            <p className="text-[10px] text-gray-500 line-clamp-2">{report.description}</p>
+            <span className={`text-[8px] font-black uppercase mt-2 inline-block px-1.5 py-0.5 rounded ${
+              report.status === 'pending' ? 'bg-red-100 text-red-600' : 
+              report.status === 'in-progress' ? 'bg-orange-100 text-orange-600' :
+              'bg-emerald-100 text-emerald-600'
+            }`}>
+              {report.status}
+            </span>
+          </div>
+        </Popup>
+      )}
+    </>
   );
 };
 
