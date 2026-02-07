@@ -56,7 +56,11 @@ const userSchema = new mongoose.Schema({
   },
   avatar: {
     type: String,
-    default: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=100' // Default avatar
+    default: function() {
+      // Generate a random avatar based on the user's name or a random string if name isn't set yet
+      const seed = this.name || Math.random().toString(36).substring(7);
+      return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+    }
   },
   location: {
     type: String

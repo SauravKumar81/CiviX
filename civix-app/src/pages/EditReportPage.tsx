@@ -3,31 +3,11 @@ import { Camera, MapPin, ChevronLeft, Info, X, Check, type LucideIcon } from 'lu
 import { useNavigate, useParams } from 'react-router-dom';
 import { getReport, updateReport } from '../services/reportService';
 import axios from 'axios';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import Map, { Marker, NavigationControl } from 'react-map-gl/mapbox';
 
-// Fix for default Leaflet icon
-const DefaultIcon = L.icon({
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-L.Marker.prototype.options.icon = DefaultIcon;
 
-const LocationMarker = ({ position, setPosition }: { position: [number, number], setPosition: (pos: [number, number]) => void }) => {
-  useMapEvents({
-    click(e) {
-      setPosition([e.latlng.lat, e.latlng.lng]);
-    },
-  });
 
-  return position ? <Marker position={position} /> : null;
-};
+// mapboxgl.workerClass = require('worker-loader!mapbox-gl/dist/mapbox-gl-csp-worker').default;
 
 const EditReportPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,10 +20,16 @@ const EditReportPage: React.FC = () => {
   const [error, setError] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [coordinates, setCoordinates] = useState<[number, number]>([47.6062, -122.3321]);
+  const [coordinates, setCoordinates] = useState<[number, number]>([47.6062, -122.3321]); // Lat, Lng
+  const [viewState, setViewState] = useState({
+    longitude: -122.3321,
+    latitude: 47.6062,
+    zoom: 13
+  });
   const [address, setAddress] = useState('Seattle, WA 98101');
   const [showLocationCheck, setShowLocationCheck] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mapRef = useRef<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -60,8 +46,11 @@ const EditReportPage: React.FC = () => {
           setImagePreview(report.imageUrl);
         }
         if (report.location?.coordinates) {
-          // GeoJSON is [lng, lat], Leaflet is [lat, lng]
-          setCoordinates([report.location.coordinates[1], report.location.coordinates[0]]);
+          // GeoJSON is [lng, lat]
+          const lng = report.location.coordinates[0];
+          const lat = report.location.coordinates[1];
+          setCoordinates([lat, lng]);
+          setViewState(prev => ({ ...prev, longitude: lng, latitude: lat }));
           setAddress(report.location.formattedAddress || 'Selected Location');
         }
       } catch (err) {
@@ -101,15 +90,26 @@ const EditReportPage: React.FC = () => {
     setShowLocationCheck(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setCoordinates([position.coords.latitude, position.coords.longitude]);
-        setAddress(`Lat: ${position.coords.latitude.toFixed(4)}, Lng: ${position.coords.longitude.toFixed(4)}`);
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setCoordinates([lat, lng]);
+        setAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
         setShowLocationCheck(false);
+        
+        mapRef.current?.flyTo({ center: [lng, lat], zoom: 15 });
+        setViewState(prev => ({ ...prev, longitude: lng, latitude: lat, zoom: 15 }));
       },
       () => {
         setError('Unable to retrieve your location');
         setShowLocationCheck(false);
       }
     );
+  };
+  
+  const handleMapClick = (event: any) => {
+    const { lng, lat } = event.lngLat;
+    setCoordinates([lat, lng]);
+    setAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
   };
 
   const handleSubmit = async () => {
@@ -254,10 +254,18 @@ const EditReportPage: React.FC = () => {
           </div>
           
           <div className="relative h-80 bg-gray-100 dark:bg-gray-800 rounded-[28px] overflow-hidden border border-gray-100 dark:border-gray-700 shadow-inner">
-            <MapContainer center={coordinates} zoom={13} style={{ height: '100%', width: '100%' }}>
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" className="dark:invert dark:hue-rotate-180 dark:brightness-95 dark:contrast-125" />
-              <LocationMarker position={coordinates} setPosition={setCoordinates} />
-            </MapContainer>
+            <Map
+              {...viewState}
+              onMove={(evt: any) => setViewState(evt.viewState)}
+              onClick={handleMapClick}
+              style={{ width: '100%', height: '100%' }}
+              mapStyle="mapbox://styles/mapbox/streets-v11"
+              mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
+              ref={mapRef}
+            >
+              <NavigationControl position="bottom-right" />
+              <Marker longitude={coordinates[1]} latitude={coordinates[0]} color="red" />
+            </Map>
             <div className="absolute bottom-4 left-4 right-4 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md p-4 rounded-2xl flex items-center gap-3 border border-white dark:border-gray-800 shadow-xl z-[400]">
               <MapPin className="w-5 h-5 text-primary" />
               <div className="flex-1 min-w-0">

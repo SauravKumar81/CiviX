@@ -1,12 +1,25 @@
 import React, { useState } from 'react';
-import { Marker, Popup } from 'react-map-gl';
+import { Marker, Popup } from 'react-map-gl/mapbox';
+
 import type { Report } from '../services/reportService';
-import { MapPin } from 'lucide-react';
+import { MapPin, Car, Construction, Building2, Trash2, Megaphone } from 'lucide-react';
 
 // --- Sub-components ---
 
+const getCategoryIcon = (category: string) => {
+  switch (category) {
+    case 'Car': return Car;
+    case 'Road': return Construction;
+    case 'Building': return Building2;
+    case 'Dirty': return Trash2;
+    case 'Public Issue': return Megaphone;
+    default: return MapPin;
+  }
+};
+
 export const ReportMarker = ({ report, onClick }: { report: Report; onClick: () => void }) => {
   const [showPopup, setShowPopup] = useState(false);
+  const Icon = getCategoryIcon(report.category);
 
   return (
     <>
@@ -14,13 +27,13 @@ export const ReportMarker = ({ report, onClick }: { report: Report; onClick: () 
         longitude={report.location.coordinates[0]}
         latitude={report.location.coordinates[1]}
         anchor="bottom"
-        onClick={e => {
+        onClick={(e: any) => {
           e.originalEvent.stopPropagation();
           onClick();
           setShowPopup(true);
         }}
       >
-        <MapPin className="text-primary w-8 h-8 fill-primary/20 hover:scale-110 transition-transform cursor-pointer" />
+        <Icon className="text-primary w-8 h-8 fill-primary/20 hover:scale-110 transition-transform cursor-pointer" />
       </Marker>
 
       {showPopup && (

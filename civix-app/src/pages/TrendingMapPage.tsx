@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   ChevronLeft, Search, Navigation2, Layers, Info, Filter, List, 
   Heart, MessageSquare, Compass, Home, TrendingUp, Map as MapIcon, 
@@ -7,21 +7,12 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { getReports } from '../services/reportService';
 import type { Report } from '../services/reportService';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import Map, { NavigationControl, Source, Layer } from 'react-map-gl/mapbox';
+
+
 import { ReportMarker, MapTool, SideIcon, FilterTab } from '../components/MapComponents';
 
-// Map Controller to handle centering
-const MapController = ({ center, trigger }: { center: [number, number] | null, trigger: number }) => {
-  const map = useMap();
-  useEffect(() => {
-    if (center) {
-      map.flyTo(center, 13, { duration: 2 });
-    }
-  }, [center, map, trigger]);
-  return null;
-};
+// mapboxgl.workerClass = require('worker-loader!mapbox-gl/dist/mapbox-gl-csp-worker').default;
 
 const TrendingMapPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'MAP' | 'LIST'>('MAP');
@@ -34,25 +25,22 @@ const TrendingMapPage: React.FC = () => {
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'trending' | 'neighborhoods' | 'official'>('trending');
-  const [recenterTrigger, setRecenterTrigger] = useState(0);
+  const [viewState, setViewState] = useState({
+    longitude: -122.3321,
+    latitude: 47.6062,
+    zoom: 13,
+    pitch: 60,
+    bearing: 20
+  });
+  
+  const mapRef = useRef<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Fix for default Leaflet icon not showing in Vite
-    const DefaultIcon = L.icon({
-      iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-      iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      tooltipAnchor: [16, -28],
-      shadowSize: [41, 41]
-    });
-    L.Marker.prototype.options.icon = DefaultIcon;
-
     const fetchReports = async () => {
       setLoading(true);
+      console.log("Mapbox Token present:", !!import.meta.env.VITE_MAPBOX_TOKEN);
+      console.log("Mapbox Token value (truncated):", import.meta.env.VITE_MAPBOX_TOKEN?.substring(0, 10));
       try {
         let params: any = { q: searchQuery };
         
@@ -83,6 +71,9 @@ const TrendingMapPage: React.FC = () => {
           const lon = position.coords.longitude;
           setUserPos([lat, lon]);
           
+          // Fly to user location
+          mapRef.current?.flyTo({ center: [lon, lat], zoom: 14 });
+          
           try {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
             const data = await res.json();
@@ -104,6 +95,19 @@ const TrendingMapPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchQuery, activeFilter, userPos]);
 
+  // Handle re-center trigger
+  const handleRecenter = () => {
+    if (userPos && mapRef.current) {
+       mapRef.current.flyTo({ center: [userPos[1], userPos[0]], zoom: 14 });
+    }
+  };
+
+  const mapStyle = useMemo(() => {
+    if (mapLayer === 'satellite') return "mapbox://styles/mapbox/satellite-streets-v12";
+    if (mapLayer === 'dark') return "mapbox://styles/mapbox/dark-v11";
+    return "mapbox://styles/mapbox/standard";
+  }, [mapLayer]);
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 font-sans overflow-hidden transition-colors duration-300">
       {/* Sidebar for navigation consistency */}
@@ -115,7 +119,6 @@ const TrendingMapPage: React.FC = () => {
           <SideIcon icon={<Compass className="text-primary" />} active />
           <SideIcon icon={<Home className="text-gray-400 hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/')} />} />
           <SideIcon icon={<TrendingUp className="text-gray-400 hover:text-primary" />} />
-          <SideIcon icon={<MapIcon className="text-gray-400 hover:text-primary" />} />
         </div>
       </aside>
 
@@ -174,6 +177,7 @@ const TrendingMapPage: React.FC = () => {
         <div className="flex-1 relative bg-gray-100 dark:bg-gray-900 overflow-hidden">
           {activeTab === 'LIST' ? (
             <div className="h-full overflow-y-auto p-8 bg-slate-50 dark:bg-gray-950 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:16px_16px]">
+              {/* Note: I'm keeping the LIST view content essentially the same, assuming it doesn't need Mapbox changes except maybe mini-maps, but based on reading it seems purely list/UI based */}
               <div className="max-w-5xl mx-auto relative min-h-[800px]">
                 {/* Central Node */}
                 <div className="absolute left-1/2 top-10 -translate-x-1/2 z-20">
@@ -253,39 +257,58 @@ const TrendingMapPage: React.FC = () => {
                <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Synchronizing Map...</p>
             </div>
           ) : (
-            <MapContainer 
-              center={[47.6062, -122.3321]} 
-              zoom={13} 
-              scrollWheelZoom={true}
-              style={{ height: '100%', width: '100%', zIndex: 1 }}
-              className="z-10"
+            <Map
+              {...viewState}
+              onMove={(evt: any) => setViewState(evt.viewState)}
+              style={{ width: '100%', height: '100%' }}
+              mapStyle={mapStyle}
+              mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
+              ref={mapRef}
+              terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
             >
-              <MapController center={userPos} trigger={recenterTrigger} />
-              
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url={
-                  mapLayer === 'satellite' 
-                    ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" 
-                    : mapLayer === 'dark'
-                    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                    : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                }
-                className={mapLayer === 'standard' ? "dark:invert dark:hue-rotate-180 dark:brightness-95 dark:contrast-125" : ""}
+              <Source
+                id="mapbox-dem"
+                type="raster-dem"
+                url="mapbox://mapbox.mapbox-terrain-dem-v1"
+                tileSize={512}
+                maxzoom={14}
               />
               
-              {userPos && (
-                <Marker position={userPos} icon={L.icon({
-                  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-                  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-                  iconSize: [25, 41],
-                  iconAnchor: [12, 41],
-                  popupAnchor: [1, -34],
-                  shadowSize: [41, 41]
-                })}>
-                  <Popup>You are here</Popup>
-                </Marker>
+              {/* Only show manual 3D buildings if not using Standard style (which has them built-in) */}
+              {mapLayer !== 'standard' && (
+                <Layer
+                  id="3d-buildings"
+                  source="composite"
+                  source-layer="building"
+                  filter={['==', 'extrude', 'true']}
+                  type="fill-extrusion"
+                  minzoom={15}
+                  paint={{
+                    'fill-extrusion-color': '#aaa',
+                    'fill-extrusion-height': [
+                      'interpolate',
+                      ['linear'],
+                      ['zoom'],
+                      15,
+                      0,
+                      15.05,
+                      ['get', 'height']
+                    ],
+                    'fill-extrusion-base': [
+                      'interpolate',
+                      ['linear'],
+                      ['zoom'],
+                      15,
+                      0,
+                      15.05,
+                      ['get', 'min_height']
+                    ],
+                    'fill-extrusion-opacity': 0.6
+                  }}
+                />
               )}
+
+              <NavigationControl position="bottom-right" />
               
               {reports.map((report) => (
                 <ReportMarker 
@@ -294,7 +317,7 @@ const TrendingMapPage: React.FC = () => {
                   onClick={() => setSelectedReport(report)}
                 />
               ))}
-            </MapContainer>
+            </Map>
           )}
 
           {/* Layer Menu Overlay */}
@@ -314,8 +337,8 @@ const TrendingMapPage: React.FC = () => {
 
           {/* Interactive Overlay Tools */}
           <div className="absolute top-6 right-6 flex flex-col gap-2 z-[400]">
-            <div onClick={() => setRecenterTrigger(prev => prev + 1)} title="Re-center Map">
-               <MapTool icon={<Compass className={recenterTrigger > 0 ? "text-primary fill-primary/20" : ""} />} label="Locate Me" />
+            <div onClick={handleRecenter} title="Re-center Map">
+               <MapTool icon={<Compass className={userPos ? "text-primary fill-primary/20" : ""} />} label="Locate Me" />
             </div>
             <div onClick={() => setShowLayerMenu(!showLayerMenu)}>
               <MapTool icon={<Layers />} label="Layers" />
