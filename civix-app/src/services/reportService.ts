@@ -18,6 +18,8 @@ export interface Report {
     _id: string;
     name: string;
     email: string;
+    avatar?: string;
+    rank?: string;
   };
   upvotes?: number;
   isVerified?: boolean;
