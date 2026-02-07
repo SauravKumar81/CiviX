@@ -38,8 +38,7 @@ const reportSchema = new mongoose.Schema({
     default: []
   },
   imageUrl: {
-    type: String,
-    default: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=2938&ixlib=rb-4.0.3'
+    type: String
   },
   location: {
     // GeoJSON Point

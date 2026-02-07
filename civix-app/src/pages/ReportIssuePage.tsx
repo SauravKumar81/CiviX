@@ -52,6 +52,23 @@ const ReportIssuePage: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const fetchAddress = async (lng: number, lat: number) => {
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${import.meta.env.VITE_MAPBOX_TOKEN}&types=address,poi`
+      );
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        setAddress(data.features[0].place_name);
+      } else {
+        setAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+      }
+    } catch (error) {
+      console.error('Error fetching address:', error);
+      setAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+    }
+  };
+
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser');
@@ -64,7 +81,7 @@ const ReportIssuePage: React.FC = () => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
         setCoordinates([lat, lng]);
-        setAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+        fetchAddress(lng, lat);
         setShowLocationCheck(false);
         
         setViewState(prev => ({ ...prev, longitude: lng, latitude: lat, zoom: 15 }));
@@ -83,7 +100,7 @@ const ReportIssuePage: React.FC = () => {
   const handleMapClick = (event: any) => {
     const { lng, lat } = event.lngLat;
     setCoordinates([lat, lng]);
-    setAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+    fetchAddress(lng, lat);
   };
 
   const handleSubmit = async () => {
