@@ -64,7 +64,7 @@ exports.getReports = async (req, res, next) => {
 
     let reports = await Report.find(query).populate({
       path: 'user',
-      select: 'name rank'
+      select: 'name rank avatar'
     });
 
     // Custom Sorting Logic
