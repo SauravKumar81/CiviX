@@ -156,13 +156,11 @@ exports.createReport = async (req, res, next) => {
 
     // Extract hashtags from description
     if (reportData.description) {
-      reportData.tags = (reportData.description.match(/#[a-z0-9_]+/gi) || []).map(tag => tag.substring(1)); // remove #
+      const tags = reportData.description.match(/#[a-z0-9_]+/gi) || [];
+      reportData.tags = [...new Set(tags.map(tag => tag.substring(1).toLowerCase()))]; // Unique & Lowercase
     }
 
-    // Extract hashtags from description
-    if (reportData.description) {
-      reportData.tags = (reportData.description.match(/#[a-z0-9_]+/gi) || []).map(tag => tag.substring(1)); // remove #
-    }
+
 
     console.log('Final Report Data:', reportData);
 
@@ -208,6 +206,12 @@ exports.updateReport = async (req, res, next) => {
       } catch (e) {
         // Fallback
       }
+    }
+
+    // Extract hashtags from description if it's being updated
+    if (updateData.description) {
+         const tags = updateData.description.match(/#[a-z0-9_]+/gi) || [];
+         updateData.tags = [...new Set(tags.map(tag => tag.substring(1).toLowerCase()))];
     }
 
     report = await Report.findByIdAndUpdate(req.params.id, updateData, {
@@ -299,6 +303,33 @@ exports.shareReport = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: report
+    });
+    await report.save();
+
+    res.status(200).json({
+      success: true,
+      data: report
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// @desc    Get trending tags
+// @route   GET /api/reports/tags/trending
+// @access  Public
+exports.getTrendingTags = async (req, res, next) => {
+  try {
+    const tags = await Report.aggregate([
+      { $unwind: '$tags' },
+      { $group: { _id: { $toLower: '$tags' }, count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: tags.map(t => ({ tag: t._id, count: t.count }))
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

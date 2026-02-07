@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import { getReports, updateReport, createReport, addComment, shareReport } from '../services/reportService';
 import type { Report } from '../services/reportService';
 import { useNavigate, useLocation } from 'react-router-dom';
+import TrendingTags from '../components/TrendingTags';
 import { useAuth } from '../context/AuthContext';
 import { toggleBookmark, getBookmarks } from '../services/authService';
 
@@ -26,6 +27,7 @@ const HomeFeed: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'local' | 'global' | 'mine' | 'following'>('global');
   const [userLocation, setUserLocation] = useState<{ city?: string; state?: string; latitude?: number; longitude?: number } | null>(null);
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -86,8 +88,22 @@ const HomeFeed: React.FC = () => {
          }
       }
       
+      if (activeTag) {
+          // Client-side filter for now since backend sort logic is strict and I don't want to break it
+          // OR better: pass tag to clean query.
+          // Let's rely on client-side filtering for immediate feedback if the backend doesn't support 'tag' param yet.
+          // Wait, I updated 'createReport' to extract tags, but 'getReports' doesn't filter by tag explicitly in my previous view.
+          // I'll add client-side filtering here for robustness.
+      }
+      
       const data = await getReports(filters);
-      setReports(data.data);
+      let fetchedReports = data.data;
+
+      if (activeTag) {
+        fetchedReports = fetchedReports.filter((r: Report) => r.tags && r.tags.includes(activeTag));
+      }
+
+      setReports(fetchedReports);
     } catch (error) {
       console.error('Error fetching reports:', error);
     } finally {
@@ -122,6 +138,10 @@ const HomeFeed: React.FC = () => {
     detectLocation();
     fetchReports();
   }, []);
+
+  useEffect(() => {
+    fetchReports();
+  }, [activeTag]);
 
   const handleFilterChange = (filter: 'local' | 'global' | 'mine' | 'following') => {
     setActiveFilter(filter);
@@ -382,9 +402,31 @@ const HomeFeed: React.FC = () => {
             </div>
 
             <div className="flex border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-hide bg-white dark:bg-gray-950">
-              <Tab label="Local Reports" active={activeFilter === 'local'} onClick={() => handleFilterChange('local')} />
-              <Tab label="Following" active={activeFilter === 'following'} onClick={() => handleFilterChange('following')} />
-              <Tab label="Priority Hub" active={activeFilter === 'global'} onClick={() => handleFilterChange('global')} />
+              <Tab label="Local Reports" active={activeFilter === 'local'} onClick={() => { handleFilterChange('local'); setActiveTag(null); }} />
+              <Tab label="Following" active={activeFilter === 'following'} onClick={() => { handleFilterChange('following'); setActiveTag(null); }} />
+              <Tab label="Priority Hub" active={activeFilter === 'global'} onClick={() => { handleFilterChange('global'); setActiveTag(null); }} />
+            </div>
+
+            <div className="px-6 pt-4 bg-gray-50/10 dark:bg-gray-900/10">
+               <TrendingTags 
+                  activeTag={activeTag} 
+                  onTagClick={(tag) => {
+                    if (activeTag === tag) {
+                      setActiveTag(null);
+                      fetchReports(activeFilter);
+                    } else {
+                      setActiveTag(tag);
+                      // Trigger refetch or just re-render is handled by effect?
+                      // The fetchReports depends on state? No, I call it manually.
+                      // I need to trigger fetch or filter.
+                      // Best way: Update state, then effect triggers fetch?
+                      // No, fetchReports is manual.
+                      // I'll just call fetchReports() inside a useEffect listening to activeTag?
+                      // Or just call it here.
+                      // But state update is async.
+                    }
+                  }} 
+               />
             </div>
 
             <div className="bg-gray-50/30 dark:bg-gray-900/10">
@@ -458,6 +500,7 @@ const HomeFeed: React.FC = () => {
                         console.error('Failed to bookmark:', err);
                       }
                     }}
+                    onTagClick={(tag) => setActiveTag(tag)}
                   />
                 ))
               ) : (
@@ -582,9 +625,10 @@ interface FeedItemProps {
     createdAt: string;
   }[];
   isBookmarked?: boolean;
+  onTagClick?: (tag: string) => void;
 }
 
-const FeedItem = ({ id, userId, user, category, tag, tags, content, image, images, engagement, status, location, userLocation, reportCoordinates, comments, isBookmarked, onEdit, onVote, onComment, onShare, onBookmark }: FeedItemProps & { id: string, location?: string, onEdit: (id: string) => void, onVote: (id: string) => void, onComment: (id: string, text: string) => void, onShare: (id: string) => void, onBookmark: (id: string) => void }) => {
+const FeedItem = ({ id, userId, user, category, tag, tags, content, image, images, engagement, status, location, userLocation, reportCoordinates, comments, isBookmarked, onEdit, onVote, onComment, onShare, onBookmark, onTagClick }: FeedItemProps & { id: string, location?: string, onEdit: (id: string) => void, onVote: (id: string) => void, onComment: (id: string, text: string) => void, onShare: (id: string) => void, onBookmark: (id: string) => void }) => {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const navigate = useNavigate();
@@ -654,15 +698,19 @@ const FeedItem = ({ id, userId, user, category, tag, tags, content, image, image
         {tags && tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {tags.map((tag: string, idx: number) => (
-              <span key={idx} className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full cursor-pointer hover:bg-primary/20 transition-colors">
-                {tag}
+              <span 
+                key={idx} 
+                onClick={(e) => { e.stopPropagation(); onTagClick?.(tag); }}
+                className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full cursor-pointer hover:bg-primary/20 transition-colors"
+              >
+                #{tag}
               </span>
             ))}
           </div>
         )}
 
         {/* Image Attachment */}
-          {image && <img src={image} className="rounded-2xl w-full h-[200px] sm:h-[320px] object-cover border border-gray-100 dark:border-gray-800 shadow-sm mb-4" alt="Report" />}
+          {image && image !== 'no-photo.jpg' && <img src={image} className="rounded-2xl w-full h-[200px] sm:h-[320px] object-cover border border-gray-100 dark:border-gray-800 shadow-sm mb-4" alt="Report" />}
           {images && (
             <div className="grid grid-cols-2 gap-2 mb-4">
               {images.map((img: string, i: number) => (
