@@ -26,9 +26,9 @@ const TrendingMapPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'trending' | 'neighborhoods' | 'official'>('trending');
   const [viewState, setViewState] = useState({
-    longitude: -122.3321,
-    latitude: 47.6062,
-    zoom: 13,
+    longitude: 77.2090,
+    latitude: 28.6139,
+    zoom: 11,
     pitch: 60,
     bearing: 20
   });
@@ -81,7 +81,7 @@ const TrendingMapPage: React.FC = () => {
             setUserCity(city);
           } catch (e) {
             console.error("Reverse geocode failed", e);
-            setUserCity("Seattle"); // Fallback
+            setUserCity("New Delhi"); // Fallback
           }
         },
         (err) => console.error("Loc error", err)

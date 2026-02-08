@@ -14,7 +14,8 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'civix-reports',
-    allowed_formats: ['jpg', 'jpeg', 'png'],
+    allowedFormats: ['jpg', 'jpeg', 'png', 'webp'], // CamelCase for v4
+    resource_type: 'auto',
     transformation: [{ width: 1000, height: 1000, crop: 'limit' }]
   }
 });

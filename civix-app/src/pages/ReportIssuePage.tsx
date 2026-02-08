@@ -21,13 +21,13 @@ const ReportIssuePage: React.FC = () => {
   const [error, setError] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [coordinates, setCoordinates] = useState<[number, number]>([47.6062, -122.3321]); // Lat, Lng
+  const [coordinates, setCoordinates] = useState<[number, number]>([28.6139, 77.2090]); // Lat, Lng
   const [viewState, setViewState] = useState({
-    longitude: -122.3321,
-    latitude: 47.6062,
-    zoom: 13
+    longitude: 77.2090,
+    latitude: 28.6139,
+    zoom: 11
   });
-  const [address, setAddress] = useState('Seattle, WA 98101');
+  const [address, setAddress] = useState('New Delhi, India');
   const [showMapModal, setShowMapModal] = useState(false);
   const [showLocationCheck, setShowLocationCheck] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,7 +59,9 @@ const ReportIssuePage: React.FC = () => {
       );
       const data = await response.json();
       if (data.features && data.features.length > 0) {
-        setAddress(data.features[0].place_name);
+        const placeName = data.features[0].place_name;
+        const shortAddress = placeName.split(',').slice(0, 3).join(',');
+        setAddress(shortAddress);
       } else {
         setAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
       }
@@ -112,7 +114,10 @@ const ReportIssuePage: React.FC = () => {
     try {
       const formData = new FormData();
       formData.append('title', title || `Report - ${category}`);
-      formData.append('description', description);
+      
+      const categoryTag = category.replace(/\s+/g, '');
+      const descriptionWithTag = description.includes('#') ? description : `${description} #${categoryTag}`;
+      formData.append('description', descriptionWithTag);
       formData.append('category', category);
       formData.append('status', 'pending');
       

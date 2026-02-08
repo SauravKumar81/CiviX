@@ -8,11 +8,33 @@ import Map, { Marker, NavigationControl } from 'react-map-gl/mapbox';
 
 
 // mapboxgl.workerClass = require('worker-loader!mapbox-gl/dist/mapbox-gl-csp-worker').default;
+import { useAuth } from '../context/AuthContext';
 
 const EditReportPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const [reportOwnerId, setReportOwnerId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+
+  const fetchAddress = async (lng: number, lat: number) => {
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${import.meta.env.VITE_MAPBOX_TOKEN}&types=address,poi`
+      );
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        const placeName = data.features[0].place_name;
+        setAddress(placeName.split(',').slice(0, 3).join(','));
+      } else {
+        setAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+      }
+    } catch (error) {
+      console.error('Error fetching address:', error);
+      setAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+    }
+  };
+
   const [category, setCategory] = useState('Infrastructure');
   const [status, setStatus] = useState<'pending' | 'in-progress' | 'resolved'>('pending');
   const [loading, setLoading] = useState(false);
@@ -20,13 +42,13 @@ const EditReportPage: React.FC = () => {
   const [error, setError] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [coordinates, setCoordinates] = useState<[number, number]>([47.6062, -122.3321]); // Lat, Lng
+  const [coordinates, setCoordinates] = useState<[number, number]>([28.6139, 77.2090]); // Lat, Lng
   const [viewState, setViewState] = useState({
-    longitude: -122.3321,
-    latitude: 47.6062,
-    zoom: 13
+    longitude: 77.2090,
+    latitude: 28.6139,
+    zoom: 11
   });
-  const [address, setAddress] = useState('Seattle, WA 98101');
+  const [address, setAddress] = useState('New Delhi, India');
   const [showLocationCheck, setShowLocationCheck] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<any>(null);
@@ -42,6 +64,9 @@ const EditReportPage: React.FC = () => {
         setDescription(report.description);
         setCategory(report.category);
         setStatus(report.status);
+        if (report.user) {
+          setReportOwnerId(typeof report.user === 'object' ? report.user._id : report.user);
+        }
         if (report.imageUrl && report.imageUrl !== 'no-photo.jpg') {
           setImagePreview(report.imageUrl);
         }
@@ -62,6 +87,15 @@ const EditReportPage: React.FC = () => {
     };
     fetchReportData();
   }, [id]);
+
+  useEffect(() => {
+    if (!fetching && reportOwnerId && user) {
+      if (reportOwnerId !== user.id && user.role !== 'admin') {
+         setError('You are not authorized to edit this report.');
+         setTimeout(() => navigate('/'), 2000);
+      }
+    }
+  }, [fetching, reportOwnerId, user, navigate]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -93,7 +127,8 @@ const EditReportPage: React.FC = () => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
         setCoordinates([lat, lng]);
-        setAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+        setCoordinates([lat, lng]);
+        fetchAddress(lng, lat);
         setShowLocationCheck(false);
         
         mapRef.current?.flyTo({ center: [lng, lat], zoom: 15 });
@@ -109,7 +144,7 @@ const EditReportPage: React.FC = () => {
   const handleMapClick = (event: any) => {
     const { lng, lat } = event.lngLat;
     setCoordinates([lat, lng]);
-    setAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+    fetchAddress(lng, lat);
   };
 
   const handleSubmit = async () => {
