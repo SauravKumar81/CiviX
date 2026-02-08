@@ -7,6 +7,7 @@ import HomeFeed from './pages/HomeFeed';
 import ReportIssuePage from './pages/ReportIssuePage';
 import TrendingMapPage from './pages/TrendingMapPage';
 import EditReportPage from './pages/EditReportPage';
+import ReportDetailPage from './pages/ReportDetailPage';
 import LogoutConfirmationPage from './pages/LogoutConfirmationPage';
 import ProfilePage from './pages/ProfilePage';
 import ProfileSetupPage from './pages/ProfileSetupPage';
@@ -62,6 +63,7 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route path="/report/:id" element={<ReportDetailPage />} />
               <Route path="/map" element={<TrendingMapPage />} />
               <Route 
                 path="/edit-report/:id" 

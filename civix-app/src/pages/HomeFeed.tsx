@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Home, Compass, FileText, Bell, User, Search, TrendingUp, Map as MapIcon, 
-  Plus, MoreHorizontal, Heart, MessageSquare, Share2, Bookmark,
+  Plus, MoreHorizontal,
   Menu, X, ChevronLeft, ChevronRight, Moon, Sun, MapPin
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { getReports, updateReport, createReport, addComment, shareReport } from '../services/reportService';
+import { getReports, updateReport, createReport, addComment, shareReport, getTrendingTags } from '../services/reportService';
 import type { Report } from '../services/reportService';
 import { useNavigate, useLocation } from 'react-router-dom';
 import TrendingTags from '../components/TrendingTags';
 import { useAuth } from '../context/AuthContext';
 import { toggleBookmark, getBookmarks } from '../services/authService';
+import FeedItem from '../components/FeedItem'; // Import FeedItem
 
 const HomeFeed: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -28,6 +29,8 @@ const HomeFeed: React.FC = () => {
   const [userLocation, setUserLocation] = useState<{ city?: string; state?: string; latitude?: number; longitude?: number } | null>(null);
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [trendingTags, setTrendingTags] = useState<{ tag: string, count: number }[]>([]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -36,6 +39,12 @@ const HomeFeed: React.FC = () => {
       }).catch(console.error);
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    getTrendingTags().then(res => {
+        if(res.success) setTrendingTags(res.data);
+    }).catch(console.error);
+  }, []);
 
   const fetchReports = async (filterOverride?: 'local' | 'global' | 'mine' | 'following') => {
     setLoading(true);
@@ -153,15 +162,17 @@ const HomeFeed: React.FC = () => {
     if (!postContent.trim()) return;
     setIsPosting(true);
     try {
+      const descriptionWithTag = postContent.includes('#') ? postContent : `${postContent} #General`;
+      
       await createReport({
         title: `Quick Alert - ${postContent.slice(0, 20)}...`,
-        description: postContent,
+        description: descriptionWithTag,
         category: 'Other',
         status: 'pending',
         location: {
           type: 'Point',
-          coordinates: [-122.3321, 47.6062], // Default Seattle
-          formattedAddress: 'Seattle'
+          coordinates: [77.2090, 28.6139], // Default New Delhi
+          formattedAddress: 'New Delhi, India'
         }
       });
       setPostContent('');
@@ -172,6 +183,24 @@ const HomeFeed: React.FC = () => {
       setIsPosting(false);
     }
   };
+
+  const filteredReports = reports.filter(report => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    
+    // Tag search
+    if (query.startsWith('#')) {
+      const tagQuery = query.slice(1);
+      return report.tags?.some(t => t.toLowerCase().includes(tagQuery));
+    }
+    
+    // General search (content, title, tags)
+    return (
+      report.description.toLowerCase().includes(query) ||
+      report.title?.toLowerCase().includes(query) ||
+      report.tags?.some(t => t.toLowerCase().includes(query))
+    );
+  });
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950 font-sans relative overflow-x-hidden transition-colors duration-300">
@@ -435,8 +464,8 @@ const HomeFeed: React.FC = () => {
                   <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                   <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Loading city reports...</p>
                 </div>
-              ) : reports.length > 0 ? (
-                reports.map((report) => (
+              ) : filteredReports.length > 0 ? (
+                filteredReports.map((report) => (
                   <FeedItem 
                     key={report._id}
                     id={report._id || ''}
@@ -456,7 +485,10 @@ const HomeFeed: React.FC = () => {
                     userLocation={userLocation && userLocation.latitude && userLocation.longitude ? { latitude: userLocation.latitude, longitude: userLocation.longitude } : null}
                     reportCoordinates={report.location?.coordinates}
                     tags={report.tags}
+                    title={report.title}
                     comments={report.comments}
+                    currentUserId={user?.id}
+                    onClick={() => navigate(`/report/${report._id}`)} // Navigate on click
                     onEdit={(id) => navigate(`/edit-report/${id}`)}
                     onVote={async (id) => {
                       if (!isAuthenticated) return navigate('/login');
@@ -523,7 +555,9 @@ const HomeFeed: React.FC = () => {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input 
                 type="text" 
-                placeholder="Search issues..." 
+                placeholder="Search issues #tag..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-gray-100 dark:bg-gray-900 border-none rounded-full py-2.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-primary focus:bg-white dark:focus:bg-gray-800 outline-none transition-all placeholder:text-gray-500"
               />
             </div>
@@ -553,13 +587,22 @@ const HomeFeed: React.FC = () => {
 
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
               <div className="p-5 border-b border-gray-50 dark:border-gray-800">
-                <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">Trending in Seattle</h3>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">Trending Tags</h3>
               </div>
               <div className="p-2">
-                <TrendingItem category="Infrastructure • Trending" tag="#WestSeattleBridge" reports="2.4k reports" />
-                <TrendingItem category="Environment • 4h ago" tag="Lake Union Water Quality" reports="842 reports" />
-                <TrendingItem category="Safety • Trending" tag="3rd Ave Lighting" reports="1.1k reports" />
-                <button className="w-full text-center py-4 text-sm font-bold text-primary hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors">Show more</button>
+                {trendingTags.length > 0 ? (
+                    trendingTags.map((t, idx) => (
+                        <TrendingItem 
+                            key={idx} 
+                            category="Trending" 
+                            tag={`#${t.tag}`} 
+                            reports={`${t.count} reports`}
+                            onClick={() => setActiveTag(t.tag)} 
+                        />
+                    ))
+                ) : (
+                    <TrendingItem category="Trending" tag="#General" reports="1.2k reports" />
+                )}
               </div>
             </div>
             
@@ -596,207 +639,11 @@ const Tab = ({ label, active = false, onClick }: { label: string, active?: boole
   </button>
 );
 
-interface FeedItemProps {
-  userId?: string;
-  user: {
-    name: string;
-    handle: string;
-    time: string;
-    avatar: string;
-  };
-  category: string;
-  tag?: string;
-  tags?: string[];
-  content: string;
-  image?: string;
-  images?: string[];
-  engagement: {
-    likes: string;
-    comments: string;
-    shares: string;
-  };
-  status: string;
-  userLocation: { latitude: number, longitude: number } | null;
-  reportCoordinates?: [number, number];
-  comments?: {
-    user: string;
-    userName: string;
-    text: string;
-    createdAt: string;
-  }[];
-  isBookmarked?: boolean;
-  onTagClick?: (tag: string) => void;
-}
+// Removed FeedItem local function component 
+// Removed helpers getCityColor, calculateDistance, and LocationBadge as they are in components/FeedItem.tsx
 
-const FeedItem = ({ id, userId, user, category, tag, tags, content, image, images, engagement, status, location, userLocation, reportCoordinates, comments, isBookmarked, onEdit, onVote, onComment, onShare, onBookmark, onTagClick }: FeedItemProps & { id: string, location?: string, onEdit: (id: string) => void, onVote: (id: string) => void, onComment: (id: string, text: string) => void, onShare: (id: string) => void, onBookmark: (id: string) => void }) => {
-  const [showComments, setShowComments] = useState(false);
-  const [commentText, setCommentText] = useState('');
-  const navigate = useNavigate();
-
-  const handleProfileClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (userId) {
-          navigate(`/profile/${userId}`);
-      }
-  };
-
-  const handleCommentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
-    onComment(id, commentText);
-    setCommentText('');
-  };
-
-  return (
-    <div className="p-4 md:p-6 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors cursor-pointer group bg-white dark:bg-gray-950">
-      <div className="flex gap-4">
-        <img 
-          src={user.avatar} 
-          onClick={handleProfileClick}
-          className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-white dark:border-gray-800 shadow-sm flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" 
-          alt={user.name} 
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-1 gap-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span 
-                onClick={handleProfileClick}
-                className="font-bold text-gray-900 dark:text-white hover:underline truncate cursor-pointer"
-              >
-                {user.name}
-              </span>
-              <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate">{user.handle}</span>
-              <span className="text-gray-300 dark:text-gray-700 hidden sm:inline">·</span>
-              <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400">{user.time}</span>
-            </div>
-            <div className="flex gap-2 items-center">
-              {tag && <span className="px-2 py-0.5 bg-orange-100/50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-[10px] font-black rounded uppercase tracking-wider">{tag}</span>}
-              <span className={`px-2 py-0.5 ${status === 'PENDING' ? 'bg-orange-50 dark:bg-orange-900/10 text-orange-500 dark:text-orange-400' : 'bg-blue-50 dark:bg-blue-900/10 text-blue-500 dark:text-blue-400'} text-[10px] font-black rounded uppercase tracking-wider`}>{status}</span>
-              <button 
-                onClick={(e) => { e.stopPropagation(); onEdit(id); }}
-                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-primary transition-all ml-1"
-                title="Edit Report"
-              >
-                <FileText className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 mb-2">
-            <p className="text-[10px] font-black text-primary/60 dark:text-blue-400/60 tracking-widest uppercase">{category}</p>
-            {location && (
-              <>
-                <span className="text-gray-300 dark:text-gray-700">·</span>
-                <LocationBadge location={location} userLocation={userLocation} coordinates={reportCoordinates} />
-              </>
-            )}
-          </div>
-          <p className="text-gray-600 dark:text-gray-300 mb-4 leading-relaxed text-sm">
-          {content}
-        </p>
-
-        {/* Hashtags */}
-        {tags && tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {tags.map((tag: string, idx: number) => (
-              <span 
-                key={idx} 
-                onClick={(e) => { e.stopPropagation(); onTagClick?.(tag); }}
-                className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full cursor-pointer hover:bg-primary/20 transition-colors"
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Image Attachment */}
-          {image && image !== 'no-photo.jpg' && <img src={image} className="rounded-2xl w-full h-[200px] sm:h-[320px] object-cover border border-gray-100 dark:border-gray-800 shadow-sm mb-4" alt="Report" />}
-          {images && (
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {images.map((img: string, i: number) => (
-                <img key={i} src={img} className="rounded-2xl w-full h-[150px] sm:h-[240px] object-cover border border-gray-100 dark:border-gray-800 shadow-sm" alt="Report" />
-              ))}
-            </div>
-          )}
-
-          <div className="flex justify-between max-w-sm text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors pt-2 border-t border-gray-50 dark:border-gray-900">
-            <button 
-              onClick={(e) => { e.stopPropagation(); onVote(id); }}
-              className="flex items-center gap-2 hover:text-blue-500 dark:hover:text-blue-400 transition-colors py-2"
-            >
-              <Heart className="w-4 h-4" /> <span className="text-xs font-bold">{engagement.likes}</span>
-            </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
-              className={`flex items-center gap-2 hover:text-primary dark:hover:text-blue-400 transition-colors py-2 ${showComments ? 'text-primary dark:text-blue-400' : ''}`}
-            >
-              <MessageSquare className="w-4 h-4" /> <span className="text-xs font-bold">{comments ? comments.length : engagement.comments}</span>
-            </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); onShare(id); }}
-              className="flex items-center gap-2 hover:text-green-500 dark:hover:text-green-400 transition-colors py-2"
-            >
-              <Share2 className="w-4 h-4" /> <span className="text-xs font-bold">{engagement.shares}</span>
-            </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); onBookmark(id); }}
-              className={`flex items-center gap-2 transition-colors py-2 ${isBookmarked ? 'text-purple-500 dark:text-purple-400' : 'hover:text-gray-900 dark:hover:text-white'}`}
-            >
-              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
-            </button>
-          </div>
-
-          {/* Comments Section */}
-          {showComments && (
-            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 animate-in slide-in-from-top-2" onClick={(e) => e.stopPropagation()}>
-              
-              {/* Comment List */}
-              {comments && comments.length > 0 && (
-                <div className="space-y-3 mb-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                  {comments.map((comment, idx) => (
-                    <div key={idx} className="flex gap-2 text-sm">
-                      <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-gray-500">
-                        {comment.userName?.charAt(0) || 'U'}
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-900 p-2.5 rounded-2xl rounded-tl-none">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="font-bold text-gray-900 dark:text-white text-xs">{comment.userName}</span>
-                          <span className="text-[10px] text-gray-400">{new Date(comment.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <p className="text-gray-700 dark:text-gray-300 leading-snug">{comment.text}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Input */}
-              <form onSubmit={handleCommentSubmit} className="flex gap-2">
-                <input 
-                  type="text" 
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Write a comment..." 
-                  className="flex-1 bg-gray-100 dark:bg-gray-900 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-primary outline-none"
-                />
-                <button 
-                  type="submit"
-                  disabled={!commentText.trim()}
-                  className="p-2 bg-primary text-white rounded-xl disabled:opacity-50 hover:bg-blue-600 transition-colors"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const TrendingItem = ({ category, tag, reports }: { category: string, tag: string, reports: string }) => (
-  <button className="w-full text-left p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors space-y-0.5">
+const TrendingItem = ({ category, tag, reports, onClick }: { category: string, tag: string, reports: string, onClick?: () => void }) => (
+  <button onClick={onClick} className="w-full text-left p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors space-y-0.5">
     <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400">{category}</p>
     <p className="text-sm font-bold text-gray-900 dark:text-white">{tag}</p>
     <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500">{reports}</p>
@@ -809,63 +656,6 @@ const CheckCircle2 = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Utility for consistent city colors
-const getCityColor = (city: string) => {
-  const colors = [
-    'bg-emerald-500 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400', 
-    'bg-blue-500 border-blue-200 text-blue-700 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-400', 
-    'bg-purple-500 border-purple-200 text-purple-700 dark:bg-purple-500/10 dark:border-purple-500/20 dark:text-purple-400', 
-    'bg-orange-500 border-orange-200 text-orange-700 dark:bg-orange-500/10 dark:border-orange-500/20 dark:text-orange-400', 
-    'bg-pink-500 border-pink-200 text-pink-700 dark:bg-pink-500/10 dark:border-pink-500/20 dark:text-pink-400', 
-    'bg-cyan-500 border-cyan-200 text-cyan-700 dark:bg-cyan-500/10 dark:border-cyan-500/20 dark:text-cyan-400'
-  ];
-  let hash = 0;
-  for (let i = 0; i < city.length; i++) hash = city.charCodeAt(i) + ((hash << 5) - hash);
-  return colors[Math.abs(hash) % colors.length];
-};
-
-// Haversine Distance Calculation
-const calculateDistance = (lat1: number, lon1: number, lat2?: number, lon2?: number) => {
-  if (!lat2 || !lon2) return null;
-  const R = 6371; // km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  const d = R * c * 0.621371; // Convert to miles
-  return d < 0.1 ? 'Nearby' : `${d.toFixed(1)} mi away`;
-};
-
-const LocationBadge = ({ location, userLocation, coordinates }: { location: string, userLocation: { latitude: number, longitude: number } | null, coordinates?: [number, number] }) => {
-  if (!location) return null;
-  
-  // Extract city/neighborhood roughly (simplified)
-  const city = location.split(',')[0].trim();
-  const colorClass = getCityColor(city);
-  
-  let distanceStr = null;
-  if (userLocation && coordinates && coordinates.length === 2) {
-    // Assuming coordinates are [lon, lat] from GeoJSON
-    distanceStr = calculateDistance(userLocation.latitude, userLocation.longitude, coordinates[1], coordinates[0]);
-  }
-
-  return (
-    <div className={`flex items-center gap-2 px-2.5 py-1 rounded-full border ${colorClass} transition-all hover:scale-105`}>
-      <div className="relative flex items-center justify-center w-2 h-2">
-         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75"></span>
-         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-current"></span>
-      </div>
-      <span className="text-[10px] font-black uppercase tracking-wider">{city}</span>
-      {distanceStr && (
-        <>
-          <span className="w-0.5 h-2 bg-current opacity-30"></span>
-          <span className="text-[9px] font-bold opacity-80">{distanceStr}</span>
-        </>
-      )}
-    </div>
-  );
-};
+// Removed getCityColor, calculateDistance, LocationBadge. They are now in components/FeedItem.tsx
 
 export default HomeFeed;
