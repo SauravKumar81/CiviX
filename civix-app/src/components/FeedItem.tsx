@@ -91,6 +91,7 @@ export interface FeedItemProps {
   comments?: {
     user: string;
     userName: string;
+    userAvatar?: string;
     text: string;
     createdAt: string;
   }[];
@@ -119,7 +120,12 @@ const FeedItem = ({
 
   const handleProfileClick = (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (userId) {
+      const rawHandle = user.handle?.replace('@', '');
+      // Prefer navigating by handle if it exists, else userId
+      // Do NOT use user.name as username, it causes 404s
+      if (rawHandle) {
+          navigate(`/profile/${rawHandle}`);
+      } else if (userId) {
           navigate(`/profile/${userId}`);
       }
   };
@@ -298,13 +304,39 @@ const FeedItem = ({
                           <div className="absolute left-[14px] top-8 bottom-[-16px] w-[2px] bg-gray-100 dark:bg-gray-800" />
                       )}
                       
-                      <div className="w-7 h-7 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0 z-10 text-[10px] font-bold text-gray-500">
-                         {comment.userName?.charAt(0).toUpperCase()}
-                      </div>
+                      {comment.userAvatar ? (
+                        <img 
+                          src={comment.userAvatar} 
+                          alt={comment.userName}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/profile/${comment.user}`);
+                          }}
+                          className="w-7 h-7 rounded-full object-cover flex-shrink-0 z-10 bg-white cursor-pointer hover:opacity-80 transition-opacity"
+                        />
+                      ) : (
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/profile/${comment.user}`);
+                          }}
+                          className="w-7 h-7 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0 z-10 text-[10px] font-bold text-gray-500 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                        >
+                           {comment.userName?.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       
                       <div className="flex-1 pb-2">
                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-gray-900 dark:text-white">{comment.userName}</span>
+                            <span 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/profile/${comment.user}`);
+                              }}
+                              className="text-xs font-bold text-gray-900 dark:text-white cursor-pointer hover:underline"
+                            >
+                                {comment.userName}
+                            </span>
                             <span className="text-[10px] text-gray-400">{new Date(comment.createdAt).toLocaleDateString()}</span>
                          </div>
                          <p className="text-sm text-gray-700 dark:text-gray-300">{comment.text}</p>
