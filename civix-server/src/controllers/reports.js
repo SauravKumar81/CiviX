@@ -33,7 +33,7 @@ exports.getReports = async (req, res, next) => {
 
     // Filter by Following
     if (req.query.following === 'true' && req.user) {
-      const currentUser = await User.findById(req.user.id);
+      const currentUser = await User.findById(req.user._id);
       if (currentUser && currentUser.following.length > 0) {
         query.user = { $in: currentUser.following };
       } else {
@@ -139,7 +139,7 @@ exports.createReport = async (req, res, next) => {
   try {
     console.log('--- CREATE REPORT DEBUG ---');
     console.log('Body:', req.body);
-    console.log('User:', req.user ? req.user.id : 'NO USER');
+    console.log('User:', req.user ? req.user._id : 'NO USER');
     console.log('File:', req.file ? req.file.path : 'NO FILE');
 
     const reportData = { ...req.body };
@@ -148,7 +148,7 @@ exports.createReport = async (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ success: false, message: 'Not authorized' });
     }
-    reportData.user = req.user.id;
+    reportData.user = req.user._id;
 
     // Add image URL if uploaded
     if (req.file) {
@@ -199,7 +199,7 @@ exports.updateReport = async (req, res, next) => {
     }
 
     // Make sure user is report owner
-    if (report.user.toString() !== req.user.id && req.user.role !== 'admin') {
+    if (report.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(401).json({ success: false, message: 'Not authorized to update this report' });
     }
 
@@ -251,7 +251,7 @@ exports.deleteReport = async (req, res, next) => {
     }
 
     // Make sure user is report owner
-    if (report.user.toString() !== req.user.id && req.user.role !== 'admin') {
+    if (report.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(401).json({ success: false, message: 'Not authorized to delete this report' });
     }
 
@@ -278,7 +278,7 @@ exports.addComment = async (req, res, next) => {
     }
 
     const comment = {
-      user: req.user.id,
+      user: req.user._id,
       userName: req.user.name,
       userAvatar: req.user.avatar,
       text: req.body.text

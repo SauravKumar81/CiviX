@@ -7,7 +7,7 @@ const Report = require('../models/Report');
 exports.toggleBookmark = async (req, res, next) => {
   try {
     const reportId = req.params.id;
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -43,7 +43,7 @@ exports.toggleBookmark = async (req, res, next) => {
 // @access  Private
 exports.getBookmarks = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id).populate({
+    const user = await User.findById(req.user._id).populate({
       path: 'bookmarks',
       populate: { path: 'user', select: 'name' }
     });
@@ -67,13 +67,13 @@ exports.getBookmarks = async (req, res, next) => {
 exports.followUser = async (req, res, next) => {
   try {
     const userToFollow = await User.findById(req.params.id);
-    const currentUser = await User.findById(req.user.id);
+    const currentUser = await User.findById(req.user._id);
 
     if (!userToFollow || !currentUser) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    if (userToFollow._id.toString() === req.user.id) {
+    if (userToFollow._id.toString() === req.user._id.toString()) {
       return res.status(400).json({ success: false, message: 'Cannot follow yourself' });
     }
 
@@ -84,8 +84,8 @@ exports.followUser = async (req, res, next) => {
     }
 
     // Add to followers list if not already there
-    if (!userToFollow.followers.includes(req.user.id)) {
-      userToFollow.followers.push(req.user.id);
+    if (!userToFollow.followers.includes(req.user._id)) {
+      userToFollow.followers.push(req.user._id);
       await userToFollow.save();
     }
 
@@ -101,7 +101,7 @@ exports.followUser = async (req, res, next) => {
 exports.unfollowUser = async (req, res, next) => {
   try {
     const userToUnfollow = await User.findById(req.params.id);
-    const currentUser = await User.findById(req.user.id);
+    const currentUser = await User.findById(req.user._id);
 
     if (!userToUnfollow || !currentUser) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -112,7 +112,7 @@ exports.unfollowUser = async (req, res, next) => {
     await currentUser.save();
 
     // Remove from followers
-    userToUnfollow.followers = userToUnfollow.followers.filter(id => id.toString() !== req.user.id);
+    userToUnfollow.followers = userToUnfollow.followers.filter(id => id.toString() !== req.user._id.toString());
     await userToUnfollow.save();
 
     res.status(200).json({ success: true, data: currentUser.following });
@@ -203,7 +203,7 @@ exports.updateUserProfile = async (req, res, next) => {
       }
     }
 
-    const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
+    const user = await User.findByIdAndUpdate(req.user._id, fieldsToUpdate, {
       new: true,
       runValidators: true
     });

@@ -60,6 +60,7 @@ const ProfilePage: React.FC = () => {
           if (data.data._id) {
             const reportData = await getReports({ user: data.data._id });
             setReports(reportData.data);
+            setSavedReports([]); // Ensure we don't bleed our saves into their feed
           }
           
           if (user && data.data.followers && data.data.followers.includes(user.id)) {
@@ -137,7 +138,7 @@ const ProfilePage: React.FC = () => {
   const totalUpvotes = myReports.reduce((acc, curr) => acc + (curr.upvotes || 0), 0);
   const impactScore = (resolvedReports * 50) + (totalUpvotes * 10) + (totalReports * 5);
 
-  const tabs = ['overview', 'reports', 'saved'] as const;
+  const tabs: ('overview' | 'reports' | 'saved')[] = isOwnProfile ? ['overview', 'reports', 'saved'] : ['overview', 'reports'];
 
   return (
     <div className="min-h-screen bg-[#0B1416] text-[#D7DADC] font-sans pb-20">
@@ -158,9 +159,10 @@ const ProfilePage: React.FC = () => {
               <div className="relative">
                 <div className="w-20 h-20 rounded-full border-2 border-[#1A282D] overflow-hidden bg-[#27353B] shadow-lg">
                    <img 
-                     src={profileUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileUser?.name || 'User'}`} 
+                     src={(profileUser?.avatar && profileUser.avatar !== 'no-photo.jpg') ? profileUser.avatar : `https://api.dicebear.com/7.x/initials/svg?seed=${profileUser?.name || 'User'}`} 
+                     onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${profileUser?.name || 'User'}`; }}
                      className="w-full h-full object-cover" 
-                     alt={profileUser?.name} 
+                     alt="" 
                    />
                 </div>
               </div>
@@ -359,9 +361,10 @@ const ProfilePage: React.FC = () => {
               <div className="p-4 pt-12 relative animate-in fade-in duration-300">
                  <div className="absolute -top-10 left-4 w-16 h-16 rounded-xl border-4 border-[#1A282D] bg-[#27353B] overflow-hidden shadow-lg">
                     <img 
-                       src={profileUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileUser?.name || 'User'}`} 
+                       src={(profileUser?.avatar && profileUser.avatar !== 'no-photo.jpg') ? profileUser.avatar : `https://api.dicebear.com/7.x/initials/svg?seed=${profileUser?.name || 'User'}`} 
+                       onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${profileUser?.name || 'User'}`; }}
                        className="w-full h-full object-cover bg-[#0B1416]" 
-                       alt={profileUser?.name} 
+                       alt="" 
                     />
                  </div>
 

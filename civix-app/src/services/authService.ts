@@ -52,9 +52,18 @@ export const isAuthenticated = () => {
   return !!localStorage.getItem('token');
 };
 
-export const followUser = (id: string) => api.put(`/users/follow/${id}`);
-export const unfollowUser = (id: string) => api.put(`/users/unfollow/${id}`);
-export const getPublicProfile = (id: string) => api.get(`/users/${id}`);
+export const followUser = async (id: string) => {
+  const response = await api.put(`/users/follow/${id}`);
+  return response.data;
+};
+export const unfollowUser = async (id: string) => {
+  const response = await api.put(`/users/unfollow/${id}`);
+  return response.data;
+};
+export const getPublicProfile = async (id: string) => {
+  const response = await api.get(`/users/${id}`);
+  return response.data;
+};
 export const updateProfile = (data: any) => {
   const isFormData = data instanceof FormData;
   return api.put('/users/profile', data, {

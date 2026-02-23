@@ -120,13 +120,11 @@ const FeedItem = ({
 
   const handleProfileClick = (e: React.MouseEvent) => {
       e.stopPropagation();
-      const rawHandle = user.handle?.replace('@', '');
-      // Prefer navigating by handle if it exists, else userId
-      // Do NOT use user.name as username, it causes 404s
-      if (rawHandle) {
-          navigate(`/profile/${rawHandle}`);
-      } else if (userId) {
+      if (userId) {
           navigate(`/profile/${userId}`);
+      } else {
+          const rawHandle = user.handle?.replace('@', '');
+          if (rawHandle) navigate(`/profile/${rawHandle}`);
       }
   };
 
