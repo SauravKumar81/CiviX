@@ -6,6 +6,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add a name']
   },
+  username: {
+    type: String,
+    required: [true, 'Please add a username'],
+    unique: true,
+    trim: true,
+    minlength: 3,
+    maxlength: 20
+  },
   email: {
     type: String,
     required: [true, 'Please add an email'],
@@ -56,7 +64,7 @@ const userSchema = new mongoose.Schema({
   },
   avatar: {
     type: String,
-    default: function() {
+    default: function () {
       // Generate a random avatar based on the user's name or a random string if name isn't set yet
       const seed = this.name || Math.random().toString(36).substring(7);
       return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
@@ -68,7 +76,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Encrypt password using bcrypt
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     next();
   }
@@ -77,7 +85,7 @@ userSchema.pre('save', async function(next) {
 });
 
 // Match user entered password to hashed password in database
-userSchema.methods.matchPassword = async function(enteredPassword) {
+userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

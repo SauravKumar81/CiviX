@@ -10,7 +10,7 @@ const ProfileSetupPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(user?.avatar || null); // Default to current avatar (random)
+  const [imagePreview, setImagePreview] = useState<string | null>(user?.avatar || null); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -38,7 +38,7 @@ const ProfileSetupPage: React.FC = () => {
       }
 
       const formData = new FormData();
-      formData.append('avatar', imageFile);
+      if (imageFile) formData.append('avatar', imageFile);
 
       // We need an endpoint to update ONLY the avatar. 
       // Assuming we can use a generic user update endpoint or a specific one.

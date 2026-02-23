@@ -18,6 +18,7 @@ export interface Report {
     _id: string;
     name: string;
     email: string;
+    username?: string;
     avatar?: string;
     rank?: string;
   };
@@ -27,6 +28,7 @@ export interface Report {
   comments?: {
     user: string;
     userName: string;
+    userAvatar?: string;
     text: string;
     createdAt: string;
   }[];

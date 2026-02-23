@@ -104,7 +104,7 @@ exports.googleAuth = async (req, res, next) => {
     });
 
     const payload = ticket.getPayload();
-    const { email, name } = payload;
+    const { email, name, picture } = payload;
 
 
 
@@ -127,11 +127,18 @@ exports.googleAuth = async (req, res, next) => {
         name,
         email,
         username: newUsername,
-        password: Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2)
+        password: Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2),
+        avatar: picture || undefined
       });
+
+      return sendTokenResponse(user, 201, res, true);
+    } else if (picture && !user.avatar?.includes('googleusercontent.com')) {
+      // Update missing or default avatar with Google avatar if available
+      user.avatar = picture;
+      await user.save();
     }
 
-    sendTokenResponse(user, 200, res);
+    sendTokenResponse(user, 200, res, false);
   } catch (err) {
     console.error('Google Auth Error:', err);
     res.status(400).json({ success: false, error: 'Google authentication failed' });
@@ -212,7 +219,7 @@ exports.deleteAccount = async (req, res, next) => {
 };
 
 // Get token from model, create cookie and send response
-const sendTokenResponse = (user, statusCode, res) => {
+const sendTokenResponse = (user, statusCode, res, isNewUser = false) => {
   // Create token
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: '30d'
@@ -220,6 +227,7 @@ const sendTokenResponse = (user, statusCode, res) => {
 
   res.status(statusCode).json({
     success: true,
-    token
+    token,
+    newUser: isNewUser
   });
 };

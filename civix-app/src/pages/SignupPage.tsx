@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, User, Shield, ArrowRight } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { register } from '../services/authService';
+import { register, googleAuth } from '../services/authService';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 
 const SignupPage: React.FC = () => {
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -24,7 +26,7 @@ const SignupPage: React.FC = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password || !confirmPassword) {
+    if (!name || !username || !email || !password || !confirmPassword) {
       return setError('Please fill in all fields');
     }
     if (password !== confirmPassword) {
@@ -38,9 +40,9 @@ const SignupPage: React.FC = () => {
     setError('');
 
     try {
-      const response = await register({ name, email, password });
+      const response = await register({ name, username, email, password });
       if (response.token) {
-        authLogin(response.token);
+        await authLogin(response.token);
         navigate('/profile-setup');
       }
     } catch (err: any) {
@@ -85,6 +87,20 @@ const SignupPage: React.FC = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter your name"
+                    className="w-full h-14 bg-gray-100 dark:bg-gray-900 border-2 border-transparent rounded-2xl pl-12 pr-4 text-sm font-bold focus:bg-white dark:focus:bg-gray-800 focus:border-primary outline-none transition-all text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Username</label>
+                <div className="relative group">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors" />
+                  <input 
+                    type="text" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Choose a username"
                     className="w-full h-14 bg-gray-100 dark:bg-gray-900 border-2 border-transparent rounded-2xl pl-12 pr-4 text-sm font-bold focus:bg-white dark:focus:bg-gray-800 focus:border-primary outline-none transition-all text-gray-900 dark:text-white"
                   />
                 </div>
@@ -150,6 +166,44 @@ const SignupPage: React.FC = () => {
                 </>
               )}
             </button>
+
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200 dark:border-gray-800" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-gray-50 dark:bg-gray-950 text-gray-400 font-bold tracking-widest uppercase text-[10px]">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-4">
+              <GoogleLogin 
+                onSuccess={async (credentialResponse: any) => {
+                  if (!credentialResponse.credential) return;
+                  setLoading(true);
+                  try {
+                    const result = await googleAuth(credentialResponse.credential);
+                    if (result.token) {
+                      await authLogin(result.token);
+                      if (result.newUser) {
+                        navigate('/profile-setup');
+                      } else {
+                        navigate('/');
+                      }
+                    }
+                  } catch (err) {
+                    setError('Google signup failed');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                onError={() => setError('Google signup failed')}
+                theme="filled_blue"
+                shape="pill"
+                text="continue_with"
+                width="250"
+              />
+            </div>
           </form>
 
           <div className="text-center space-y-4 pt-6">

@@ -8,7 +8,7 @@ import {
   Settings, LogOut, ChevronLeft, Shield, CheckCircle2, Bookmark
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { followUser, unfollowUser, getPublicProfile, updateProfile } from '../services/authService';
+import { followUser, unfollowUser, getPublicProfile, updateProfile, getBookmarks } from '../services/authService';
 import { X } from 'lucide-react';
 
 const ProfilePage: React.FC = () => {
@@ -18,6 +18,7 @@ const ProfilePage: React.FC = () => {
 
   const [profileUser, setProfileUser] = useState<any>(null);
   const [reports, setReports] = useState<Report[]>([]);
+  const [savedReports, setSavedReports] = useState<Report[]>([]);
   const [activeTab, setActiveTab] = useState<'reports' | 'saved'>('reports');
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -27,13 +28,15 @@ const ProfilePage: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
+    username: '',
     bio: '',
     location: '',
     avatar: ''
   });
   const [editLoading, setEditLoading] = useState(false);
 
-  const isOwnProfile = !id || (user && user.id === id);
+  const normalizeId = (val?: string) => val?.toLowerCase().replace(/^@/, '');
+  const isOwnProfile = !id || (user && (user.id === id || normalizeId(user.username) === normalizeId(id)));
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -44,24 +47,27 @@ const ProfilePage: React.FC = () => {
           if (!user) return; // Wait for auth
           setProfileUser(user);
           
-          // Fetch my reports
-          const data = await getReports({ user: user.id });
-          setReports(data.data);
-          
-          // Fetch saved reports (only for me)
-          // ... logic kept same for saved ...
+          if (activeTab === 'reports') {
+            const data = await getReports({ user: user.id });
+            setReports(data.data);
+          } else if (activeTab === 'saved') {
+             // Fetch bookmarks
+             const bookmarks = await getBookmarks();
+             setSavedReports(bookmarks.data);
+          }
         } else {
           // Public Profile
           const data = await getPublicProfile(id!);
           setProfileUser(data.data);
-          setReports(data.data.reports || []); // Assuming backend returns reports, else fetch separate
           
-          // Separate fetch for public reports if backend didn't include
-          const reportData = await getReports({ user: id });
-          setReports(reportData.data);
-
+          // Use the ID from the fetched user profile to filter reports
+          if (data.data._id) {
+            const reportData = await getReports({ user: data.data._id });
+            setReports(reportData.data);
+          }
+          
           // Check if I follow them
-          if (user && data.data.followers.includes(user.id)) {
+          if (user && data.data.followers && data.data.followers.includes(user.id)) {
             setIsFollowing(true);
           }
         }
@@ -72,7 +78,7 @@ const ProfilePage: React.FC = () => {
       }
     };
     loadProfile();
-  }, [id, user, isOwnProfile]);
+  }, [id, user, isOwnProfile, activeTab]);
 
   const handleFollowToggle = async () => {
     if (!user) return navigate('/login');
@@ -94,12 +100,31 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setEditLoading(true);
     try {
-      await updateProfile(editForm);
-      setProfileUser((prev: any) => ({ ...prev, ...editForm }));
+      const formData = new FormData();
+      formData.append('name', editForm.name);
+      formData.append('username', editForm.username);
+      formData.append('bio', editForm.bio);
+      formData.append('location', editForm.location);
+      if (avatarFile) {
+        formData.append('avatar', avatarFile);
+      } else if (editForm.avatar) {
+        formData.append('avatar', editForm.avatar);
+      }
+
+      await updateProfile(formData);
+      
+      // Optimistic update - for file upload we might need to wait for response to get URL
+      // But we can force a reload or fetch public profile again
+      // Ideally updateProfile returns the updated user
+      // For now, reload window to be simple or re-fetch
+      window.location.reload(); 
+      
       setIsEditModalOpen(false);
     } catch (error) {
       console.error("Failed to update profile", error);
@@ -111,6 +136,7 @@ const ProfilePage: React.FC = () => {
   const openEditModal = () => {
     setEditForm({
       name: profileUser.name || '',
+      username: profileUser.username || '',
       bio: profileUser.bio || '',
       location: profileUser.location || '',
       avatar: profileUser.avatar || ''
@@ -122,7 +148,7 @@ const ProfilePage: React.FC = () => {
   const myReports = reports;
 
   // Logic for saved reports is currently placeholder
-  const savedReports: Report[] = []; 
+  // const savedReports: Report[] = [];  <-- Removed placeholder 
 
   const totalReports = myReports.length;
   const resolvedReports = myReports.filter(r => r.status === 'resolved').length;
@@ -147,9 +173,9 @@ const ProfilePage: React.FC = () => {
               <div className="relative">
                 <div className="w-32 h-32 rounded-full border-4 border-white dark:border-gray-800 shadow-2xl overflow-hidden">
                    <img 
-                     src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200" 
-                     className="w-full h-full object-cover" 
-                     alt={user?.name} 
+                     src={profileUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileUser?.name || 'User'}`} 
+                     className="w-full h-full object-cover bg-white" 
+                     alt={profileUser?.name} 
                    />
                 </div>
                 <div className="absolute bottom-1 right-1 bg-emerald-500 w-8 h-8 rounded-full border-4 border-white dark:border-gray-800 flex items-center justify-center text-white">
@@ -159,6 +185,7 @@ const ProfilePage: React.FC = () => {
               
               <div className="flex-1 text-center md:text-left">
                  <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-1">{profileUser?.name}</h1>
+                 <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">@{profileUser?.username || profileUser?.name?.toLowerCase().replace(/\s/g, '') || 'citizen'}</p>
                  {profileUser?.bio && <p className="text-gray-600 dark:text-gray-300 italic mb-2">{profileUser.bio}</p>}
                  {profileUser?.location && <div className="flex items-center justify-center md:justify-start gap-1 text-gray-500 dark:text-gray-400 text-sm font-bold uppercase tracking-wider mb-2"><MapPin size={12} /> {profileUser.location}</div>}
                  
@@ -193,19 +220,26 @@ const ProfilePage: React.FC = () => {
                    </button>
                  ) : (
                    <>
-                     <button 
-                       onClick={openEditModal}
-                       className="p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl text-gray-600 dark:text-gray-300 transition-colors"
-                     >
-                        <Settings size={20} />
-                     </button>
-                     <button 
-                       onClick={logout}
-                       className="p-3 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl text-red-600 dark:text-red-400 transition-colors"
-                     >
-                        <LogOut size={20} />
-                     </button>
-                   </>
+                      <button 
+                        onClick={openEditModal}
+                        className="px-6 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl text-gray-900 dark:text-white font-bold transition-colors"
+                      >
+                         Edit Profile
+                      </button>
+                      <button 
+                        onClick={() => navigate('/account')}
+                        className="p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl text-gray-600 dark:text-gray-300 transition-colors"
+                        title="Account Settings"
+                      >
+                         <Settings size={20} />
+                      </button>
+                      <button 
+                        onClick={logout}
+                        className="p-3 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl text-red-600 dark:text-red-400 transition-colors"
+                      >
+                         <LogOut size={20} />
+                      </button>
+                    </>
                  )}
               </div>
            </div>
@@ -323,6 +357,16 @@ const ProfilePage: React.FC = () => {
                   className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-primary outline-none"
                 />
               </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase text-gray-500 mb-1 block">Username</label>
+                <input 
+                  type="text" 
+                  value={editForm.username}
+                  onChange={(e) => setEditForm({...editForm, username: e.target.value})}
+                  className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
               
               <div>
                 <label className="text-xs font-bold uppercase text-gray-500 mb-1 block">Bio</label>
@@ -346,14 +390,31 @@ const ProfilePage: React.FC = () => {
               </div>
 
                <div>
-                <label className="text-xs font-bold uppercase text-gray-500 mb-1 block">Avatar URL</label>
-                <input 
-                  type="text" 
-                  value={editForm.avatar}
-                  onChange={(e) => setEditForm({...editForm, avatar: e.target.value})}
-                  className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-primary outline-none"
-                  placeholder="https://..."
-                />
+                <label className="text-xs font-bold uppercase text-gray-500 mb-1 block">Avatar URL or Upload</label>
+                <div className="flex gap-2">
+                   <input 
+                     type="text" 
+                     value={editForm.avatar}
+                     onChange={(e) => setEditForm({...editForm, avatar: e.target.value})}
+                     className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-primary outline-none"
+                     placeholder="https://..."
+                   />
+                   <div className="relative">
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) {
+                            setAvatarFile(e.target.files[0]);
+                          }
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      />
+                      <button type="button" className="h-full px-4 bg-gray-100 dark:bg-gray-800 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transaction-colors flex items-center justify-center whitespace-nowrap">
+                        {avatarFile ? 'Selected' : 'Upload'}
+                      </button>
+                   </div>
+                </div>
               </div>
 
               <div className="pt-4 flex gap-3">

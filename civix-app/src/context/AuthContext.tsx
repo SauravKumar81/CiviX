@@ -4,6 +4,7 @@ import { getMe, logout as logoutService, isAuthenticated as checkAuth } from '..
 interface User {
   id: string;
   name: string;
+  username: string;
   email: string;
   role: string;
   avatar?: string;
@@ -14,7 +15,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (token: string) => void;
+  login: (token: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -44,9 +45,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     fetchUser();
   }, []);
 
-  const login = (token: string) => {
+  const login = async (token: string) => {
     localStorage.setItem('token', token);
-    fetchUser();
+    await fetchUser();
   };
 
   const logout = () => {

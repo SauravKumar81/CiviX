@@ -55,4 +55,14 @@ export const isAuthenticated = () => {
 export const followUser = (id: string) => api.put(`/users/follow/${id}`);
 export const unfollowUser = (id: string) => api.put(`/users/unfollow/${id}`);
 export const getPublicProfile = (id: string) => api.get(`/users/${id}`);
-export const updateProfile = (data: any) => api.put('/users/profile', data);
+export const updateProfile = (data: any) => {
+  const isFormData = data instanceof FormData;
+  return api.put('/users/profile', data, {
+    headers: {
+      'Content-Type': isFormData ? 'multipart/form-data' : 'application/json'
+    }
+  });
+};
+
+export const updatePassword = async (data: any) => api.put('/auth/updatepassword', data);
+export const deleteAccount = async () => api.delete('/auth/deleteaccount');

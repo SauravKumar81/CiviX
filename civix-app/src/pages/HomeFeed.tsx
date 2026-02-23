@@ -345,11 +345,11 @@ const HomeFeed: React.FC = () => {
             onClick={() => navigate('/logout')}
             className={`flex items-center p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 gap-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${isSidebarCollapsed ? 'lg:justify-center' : ''}`}
           >
-            <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100" className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="User" />
+            <img src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Guest'}`} className="w-10 h-10 rounded-full object-cover flex-shrink-0 bg-white" alt="User" />
             {!isSidebarCollapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-gray-900 dark:text-white truncate">Alex Chen</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">@chen_alex</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{user?.name || 'Guest User'}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">@{user?.username || user?.name?.toLowerCase().replace(/\s/g, '') || 'guest'}</p>
               </div>
             )}
             {!isSidebarCollapsed && <MoreHorizontal className="w-4 h-4 text-gray-400" />}
@@ -381,7 +381,7 @@ const HomeFeed: React.FC = () => {
             <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
               {isAuthenticated ? (
                 <div className="flex gap-4">
-                  <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=100" className="w-12 h-12 rounded-full object-cover" alt="User" />
+                  <img src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Guest'}`} className="w-12 h-12 rounded-full object-cover bg-white" alt="User" />
                   <div className="flex-1">
                     <textarea 
                       placeholder="What's happening in your neighborhood?" 
@@ -472,9 +472,9 @@ const HomeFeed: React.FC = () => {
                     userId={report.user?._id}
                     user={{ 
                       name: report.user?.name || "Anonymous", 
-                      handle: `@${report.user?.name?.toLowerCase().replace(/\s/g, '') || "citizen"}`, 
+                      handle: `@${report.user?.username || report.user?.name?.toLowerCase().replace(/\s/g, '') || "citizen"}`, 
                       time: "Just now", 
-                      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=100" 
+                      avatar: report.user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${report.user?.name || 'Anonymous'}`
                     }}
                     category={report.category.toUpperCase()}
                     content={report.description}

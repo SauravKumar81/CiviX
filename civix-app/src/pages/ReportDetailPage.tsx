@@ -25,56 +25,51 @@ const ReportDetailPage = () => {
     try {
       setLoading(true);
       const data = await getReport(reportId);
-      if (data.success) {
+      // Ensure we have correct structure
+      if (data.data) {
         setReport(data.data);
       } else {
-        setError('Failed to load report');
+        setError('Report load failed');
       }
     } catch (err) {
       setError('Error loading report');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVote = async (id: string) => {
-    if (!isAuthenticated) return navigate('/login');
+  const handleVote = async (reportId: string) => {
+    if (!isAuthenticated) {
+      return navigate('/login');
+    }
     
-    const newUpvotes = (report.upvotes || 0) + 1;
+    // Optimistic UI update
+    const isUpvoted = report.upvotedBy?.includes(user?.id); // Check logic if tracking votes
+    const newCount = (report.upvotes || 0) + (isUpvoted ? -1 : 1);
     
-    // Optimistic update
-    setReport((prev: any) => ({
-      ...prev,
-      upvotes: newUpvotes
-    }));
+    setReport({ ...report, upvotes: newCount });
 
     try {
-      await updateReport(id, { upvotes: newUpvotes } as any);
+       await updateReport(reportId, { upvotes: newCount } as any);
     } catch (err) {
-      console.error("Failed to update vote", err);
-      // Revert on failure
-      setReport((prev: any) => ({
-        ...prev,
-        upvotes: (prev.upvotes || 0) - 1
-      }));
+       console.error(err);
+       // Revert
+       setReport({ ...report, upvotes: (report.upvotes || 0) });
     }
   };
 
-  const handleComment = async (id: string, text: string) => {
-    if (!isAuthenticated) return navigate('/login');
-    try {
-      const res = await addComment(id, text);
-      if (res.success) {
-          // Update state with new comment
-          const newComment = res.data.comments[res.data.comments.length - 1];
-          setReport((prev: any) => ({
-              ...prev,
-              comments: [...(prev.comments || []), newComment]
-          }));
+  const handleComment = async (reportId: string, text: string) => {
+      if (!isAuthenticated) return navigate('/login');
+      try {
+          const res = await addComment(reportId, text);
+          if (res.success) {
+            // Reload to get fresh comments with populated user
+             loadReport(reportId);
+          }
+      } catch (err) {
+          console.error(err);
       }
-    } catch (err) {
-      console.error(err);
-    }
   };
 
   if (loading) return (
@@ -90,11 +85,17 @@ const ReportDetailPage = () => {
       </div>
   );
 
+  // Safely extract user
+  const reportUser = report.user || {};
+  const userName = reportUser.name || "Anonymous";
+  const userHandle = reportUser.username ? `@${reportUser.username}` : `@${userName.toLowerCase().replace(/\s/g, '')}`;
+  const userAvatar = reportUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userName}`;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors font-bold">
           <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
         </button>
         <h1 className="text-lg font-bold text-gray-900 dark:text-white truncate">Report Details</h1>
@@ -103,30 +104,36 @@ const ReportDetailPage = () => {
       <div className="max-w-3xl mx-auto pt-4 px-0 md:px-4">
         <FeedItem 
             id={report._id}
-            userId={report.user?._id || report.user} // report.user might be populated object or id string depending on API
+            userId={reportUser._id || report.user} 
             user={{
-                name: report.user?.name || "Anonymous",
-                handle: `@${report.user?.name?.toLowerCase().replace(/\s/g, '') || "citizen"}`,
+                name: userName,
+                handle: userHandle,
                 time: new Date(report.createdAt).toLocaleDateString(),
-                avatar: report.user?.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=100" // Fallback similar to HomeFeed
+                avatar: userAvatar
             }}
             category={report.category?.toUpperCase() || 'GENERAL'}
             tag={report.tags?.[0]}
             tags={report.tags}
             title={report.title}
             content={report.description}
-            image={report.imageUrl !== 'no-photo.jpg' ? report.imageUrl : undefined} // Use imageUrl consistent with HomeFeed
+            image={report.imageUrl && report.imageUrl !== 'no-photo.jpg' ? report.imageUrl : undefined}
             images={report.images}
             engagement={{ 
               likes: report.upvotes?.toString() || "0", 
-              comments: report.comments?.length.toString() || "0", 
+              comments: report.comments ? report.comments.length.toString() : "0", 
               shares: report.shares?.toString() || "0" 
             }}
             status={report.status?.toUpperCase() || 'PENDING'}
             location={report.location?.formattedAddress}
             userLocation={null} 
             reportCoordinates={report.location?.coordinates}
-            comments={report.comments}
+            comments={report.comments?.map((c: any) => ({
+                user: c.user?._id || c.user,
+                userName: c.user?.name || 'User',
+                userAvatar: c.user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.user?.name || 'User'}`,
+                text: c.text,
+                createdAt: c.createdAt
+            }))}
             isBookmarked={false} 
             currentUserId={user?.id}
             onVote={handleVote}

@@ -22,10 +22,12 @@ const LoginPage: React.FC = () => {
     try {
       const result = await googleAuth(credentialResponse.credential);
       if (result.token) {
-        authContextLogin(result.token);
-        navigate('/');
-      } else if (result.newUser) {
-        navigate('/signup', { state: { email: result.email, name: result.name } });
+        await authContextLogin(result.token);
+        if (result.newUser) {
+          navigate('/profile-setup');
+        } else {
+          navigate('/');
+        }
       }
     } catch (err: any) {
       if (err.response?.status === 404 && err.response?.data?.newUser) {
@@ -49,7 +51,7 @@ const LoginPage: React.FC = () => {
     try {
       const response = await serviceLogin({ email, password });
       if (response.token) {
-        authContextLogin(response.token);
+        await authContextLogin(response.token);
         const state = location.state as { from?: { pathname: string } } | null;
         const origin = state?.from?.pathname || '/';
         navigate(origin, { replace: true });

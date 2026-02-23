@@ -11,7 +11,7 @@ import ReportDetailPage from './pages/ReportDetailPage';
 import LogoutConfirmationPage from './pages/LogoutConfirmationPage';
 import ProfilePage from './pages/ProfilePage';
 import ProfileSetupPage from './pages/ProfileSetupPage';
-
+import AccountPage from './pages/AccountPage';
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -38,13 +38,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   return (
-    <GoogleOAuthProvider clientId="YOUR_GOOGLE_CLIENT_ID">
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID'}>
       <AuthProvider>
         <ThemeProvider>
           <Router>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route 
                 path="/profile-setup" 
@@ -78,6 +77,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ProfilePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/account" 
+                element={
+                  <ProtectedRoute>
+                    <AccountPage />
                   </ProtectedRoute>
                 } 
               />
