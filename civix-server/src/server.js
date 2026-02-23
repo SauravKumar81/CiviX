@@ -13,6 +13,7 @@ connectDB();
 // Route files
 const auth = require('./routes/auth');
 const reports = require('./routes/reports');
+const users = require('./routes/users');
 
 const app = express();
 
@@ -21,7 +22,7 @@ app.use(express.json());
 
 // Enable CORS
 app.use(cors(
-  
+
 ));
 
 // Logging
@@ -32,6 +33,7 @@ if (process.env.NODE_ENV === 'development') {
 // Mount routers
 app.use('/api/auth', auth);
 app.use('/api/reports', reports);
+app.use('/api/users', users);
 
 // Error Handler Middleware
 app.use((err, req, res, next) => {

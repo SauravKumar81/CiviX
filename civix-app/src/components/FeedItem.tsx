@@ -149,8 +149,11 @@ const FeedItem = ({
             <img 
               src={user.avatar} 
               onClick={handleProfileClick}
-              className="w-6 h-6 rounded-full object-cover cursor-pointer hover:opacity-80" 
-              alt={user.name} 
+              onError={(e) => {
+                e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`;
+              }}
+              className="w-6 h-6 rounded-full object-cover cursor-pointer hover:opacity-80 bg-gray-200 dark:bg-gray-800" 
+              alt="" 
             />
             <span className="font-bold text-gray-900 dark:text-white hover:underline cursor-pointer">r/{category?.replace(/\s+/g, '')}</span>
             <span className="text-gray-400">•</span>

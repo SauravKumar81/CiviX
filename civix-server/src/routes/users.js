@@ -1,3 +1,4 @@
+const express = require('express');
 const { toggleBookmark, getBookmarks, followUser, unfollowUser, getUserProfile, updateUserProfile } = require('../controllers/users');
 
 const router = express.Router();

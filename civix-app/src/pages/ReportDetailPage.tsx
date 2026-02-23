@@ -89,7 +89,7 @@ const ReportDetailPage = () => {
   const reportUser = report.user || {};
   const userName = reportUser.name || "Anonymous";
   const userHandle = reportUser.username ? `@${reportUser.username}` : `@${userName.toLowerCase().replace(/\s/g, '')}`;
-  const userAvatar = reportUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userName}`;
+  const userAvatar = (reportUser.avatar && reportUser.avatar !== 'no-photo.jpg') ? reportUser.avatar : `https://api.dicebear.com/7.x/initials/svg?seed=${userName}`;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
@@ -108,7 +108,21 @@ const ReportDetailPage = () => {
             user={{
                 name: userName,
                 handle: userHandle,
-                time: new Date(report.createdAt).toLocaleDateString(),
+                time: (() => {
+                  const date = new Date(report.createdAt);
+                  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+                  let interval = seconds / 31536000;
+                  if (interval > 1) return Math.floor(interval) + 'y ago';
+                  interval = seconds / 2592000;
+                  if (interval > 1) return Math.floor(interval) + 'mo ago';
+                  interval = seconds / 86400;
+                  if (interval > 1) return Math.floor(interval) + 'd ago';
+                  interval = seconds / 3600;
+                  if (interval > 1) return Math.floor(interval) + 'h ago';
+                  interval = seconds / 60;
+                  if (interval > 1) return Math.floor(interval) + 'm ago';
+                  return 'Just now';
+                })(),
                 avatar: userAvatar
             }}
             category={report.category?.toUpperCase() || 'GENERAL'}

@@ -342,7 +342,7 @@ const HomeFeed: React.FC = () => {
           </button>
           
           <div 
-            onClick={() => navigate('/logout')}
+            onClick={() => navigate('/profile')}
             className={`flex items-center p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 gap-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${isSidebarCollapsed ? 'lg:justify-center' : ''}`}
           >
             <img src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Guest'}`} className="w-10 h-10 rounded-full object-cover flex-shrink-0 bg-white" alt="User" />
@@ -473,8 +473,8 @@ const HomeFeed: React.FC = () => {
                     user={{ 
                       name: report.user?.name || "Anonymous", 
                       handle: `@${report.user?.username || report.user?.name?.toLowerCase().replace(/\s/g, '') || "citizen"}`, 
-                      time: "Just now", 
-                      avatar: report.user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${report.user?.name || 'Anonymous'}`
+                      time: timeAgo(report.createdAt), 
+                      avatar: (report.user?.avatar && report.user.avatar !== 'no-photo.jpg') ? report.user.avatar : `https://api.dicebear.com/7.x/initials/svg?seed=${report.user?.name || 'Anonymous'}`
                     }}
                     category={report.category.toUpperCase()}
                     content={report.description}
@@ -657,5 +657,23 @@ const CheckCircle2 = ({ className }: { className?: string }) => (
 );
 
 // Removed getCityColor, calculateDistance, LocationBadge. They are now in components/FeedItem.tsx
+
+export const timeAgo = (dateInput?: string | Date): string => {
+  if (!dateInput) return 'Just now';
+  const date = new Date(dateInput);
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  
+  let interval = seconds / 31536000;
+  if (interval > 1) return Math.floor(interval) + 'y ago';
+  interval = seconds / 2592000;
+  if (interval > 1) return Math.floor(interval) + 'mo ago';
+  interval = seconds / 86400;
+  if (interval > 1) return Math.floor(interval) + 'd ago';
+  interval = seconds / 3600;
+  if (interval > 1) return Math.floor(interval) + 'h ago';
+  interval = seconds / 60;
+  if (interval > 1) return Math.floor(interval) + 'm ago';
+  return 'Just now';
+};
 
 export default HomeFeed;

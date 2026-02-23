@@ -1,25 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getReports } from '../services/reportService';
-
 import type { Report } from '../services/reportService';
 import { 
   MapPin, Calendar, Award, TrendingUp, FileText, 
-  Settings, LogOut, ChevronLeft, Shield, CheckCircle2, Bookmark
+  Settings, LogOut, ChevronLeft, Bookmark, Share, Eye, Edit3, X, CheckCircle2
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { followUser, unfollowUser, getPublicProfile, updateProfile, getBookmarks } from '../services/authService';
-import { X } from 'lucide-react';
 
 const ProfilePage: React.FC = () => {
   const { user, logout } = useAuth();
-  const { id } = useParams<{ id: string }>(); // Optional ID from URL
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [profileUser, setProfileUser] = useState<any>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [savedReports, setSavedReports] = useState<Report[]>([]);
-  const [activeTab, setActiveTab] = useState<'reports' | 'saved'>('reports');
+  const [activeTab, setActiveTab] = useState<'overview' | 'reports' | 'saved'>('overview');
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
@@ -34,6 +32,7 @@ const ProfilePage: React.FC = () => {
     avatar: ''
   });
   const [editLoading, setEditLoading] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const normalizeId = (val?: string) => val?.toLowerCase().replace(/^@/, '');
   const isOwnProfile = !id || (user && (user.id === id || normalizeId(user.username) === normalizeId(id)));
@@ -43,30 +42,26 @@ const ProfilePage: React.FC = () => {
       setLoading(true);
       try {
         if (isOwnProfile) {
-          // My Profile
-          if (!user) return; // Wait for auth
+          if (!user) return;
           setProfileUser(user);
           
-          if (activeTab === 'reports') {
+          if (activeTab === 'overview' || activeTab === 'reports') {
             const data = await getReports({ user: user.id });
             setReports(data.data);
-          } else if (activeTab === 'saved') {
-             // Fetch bookmarks
-             const bookmarks = await getBookmarks();
-             setSavedReports(bookmarks.data);
+          }
+          if (activeTab === 'overview' || activeTab === 'saved') {
+            const bookmarks = await getBookmarks();
+            setSavedReports(bookmarks.data);
           }
         } else {
-          // Public Profile
           const data = await getPublicProfile(id!);
           setProfileUser(data.data);
           
-          // Use the ID from the fetched user profile to filter reports
           if (data.data._id) {
             const reportData = await getReports({ user: data.data._id });
             setReports(reportData.data);
           }
           
-          // Check if I follow them
           if (user && data.data.followers && data.data.followers.includes(user.id)) {
             setIsFollowing(true);
           }
@@ -100,8 +95,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setEditLoading(true);
@@ -118,14 +111,7 @@ const ProfilePage: React.FC = () => {
       }
 
       await updateProfile(formData);
-      
-      // Optimistic update - for file upload we might need to wait for response to get URL
-      // But we can force a reload or fetch public profile again
-      // Ideally updateProfile returns the updated user
-      // For now, reload window to be simple or re-fetch
       window.location.reload(); 
-      
-      setIsEditModalOpen(false);
     } catch (error) {
       console.error("Failed to update profile", error);
     } finally {
@@ -135,301 +121,407 @@ const ProfilePage: React.FC = () => {
 
   const openEditModal = () => {
     setEditForm({
-      name: profileUser.name || '',
-      username: profileUser.username || '',
-      bio: profileUser.bio || '',
-      location: profileUser.location || '',
-      avatar: profileUser.avatar || ''
+      name: profileUser?.name || '',
+      username: profileUser?.username || '',
+      bio: profileUser?.bio || '',
+      location: profileUser?.location || '',
+      avatar: profileUser?.avatar || ''
     });
+    setAvatarFile(null);
     setIsEditModalOpen(true);
   };
 
-  // Gamification Stats
   const myReports = reports;
-
-  // Logic for saved reports is currently placeholder
-  // const savedReports: Report[] = [];  <-- Removed placeholder 
-
   const totalReports = myReports.length;
   const resolvedReports = myReports.filter(r => r.status === 'resolved').length;
   const totalUpvotes = myReports.reduce((acc, curr) => acc + (curr.upvotes || 0), 0);
   const impactScore = (resolvedReports * 50) + (totalUpvotes * 10) + (totalReports * 5);
-  
 
+  const tabs = ['overview', 'reports', 'saved'] as const;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 font-sans pb-20">
-      {/* Header / Banner */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
-        <div className="max-w-4xl mx-auto px-6 py-8">
-           <button 
-             onClick={() => navigate('/')}
-             className="flex items-center gap-2 text-gray-400 hover:text-gray-900 dark:hover:text-white mb-6 transition-colors"
-           >
-             <ChevronLeft size={20} /> Back to Feed
-           </button>
+    <div className="min-h-screen bg-[#0B1416] text-[#D7DADC] font-sans pb-20">
+      
+      {/* Top Navbar Simulation / Back Button */}
+      <div className="w-full h-14 bg-[#1A282D] border-b border-[#27353B] flex items-center px-4 sticky top-0 z-40">
+        <button onClick={() => navigate('/')} className="flex items-center gap-2 hover:bg-[#27353B] px-3 py-1.5 rounded-full transition-colors text-sm font-bold">
+           <ChevronLeft size={18} /> Back
+        </button>
+      </div>
 
-           <div className="flex flex-col md:flex-row items-center gap-8">
+      <div className="max-w-[1200px] mx-auto pt-8 px-4 flex flex-col lg:flex-row gap-6">
+        
+        {/* Main Left Content Area */}
+        <div className="flex-1 max-w-[800px]">
+           {/* Top Header info (Avatar + Name) */}
+           <div className="flex items-center gap-4 mb-6">
               <div className="relative">
-                <div className="w-32 h-32 rounded-full border-4 border-white dark:border-gray-800 shadow-2xl overflow-hidden">
+                <div className="w-20 h-20 rounded-full border-2 border-[#1A282D] overflow-hidden bg-[#27353B] shadow-lg">
                    <img 
                      src={profileUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileUser?.name || 'User'}`} 
-                     className="w-full h-full object-cover bg-white" 
+                     className="w-full h-full object-cover" 
                      alt={profileUser?.name} 
                    />
                 </div>
-                <div className="absolute bottom-1 right-1 bg-emerald-500 w-8 h-8 rounded-full border-4 border-white dark:border-gray-800 flex items-center justify-center text-white">
-                  <CheckCircle2 size={14} />
-                </div>
               </div>
+              <div className="flex flex-col">
+                 <h1 className="text-2xl font-black text-white">{profileUser?.name}</h1>
+                 <p className="text-sm text-gray-400 font-medium">u/{profileUser?.username || profileUser?.name?.toLowerCase().replace(/\s/g, '') || 'citizen'}</p>
+              </div>
+           </div>
+
+           {/* Tabs */}
+           <div className="flex gap-2 overflow-x-auto mb-6 scrollbar-hide border-b border-[#27353B] pb-[1px]">
+              {tabs.map((tab) => (
+                <button 
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2.5 rounded-full text-sm font-bold capitalize transition-colors flex-shrink-0
+                    ${activeTab === tab ? 'bg-[#27353B] text-white' : 'text-gray-400 hover:bg-[#1A282D]'}`}
+                >
+                  {tab}
+                </button>
+              ))}
+           </div>
+
+           {/* Active Tab Content */}
+           <div className="space-y-4">
+              {loading ? (
+                <div className="py-20 flex justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>
+              ) : (
+                <>
+                  {/* Overview Layout */}
+                  {activeTab === 'overview' && (() => {
+                     const activities: any[] = [];
+                     
+                     myReports.forEach(r => {
+                       activities.push({
+                         id: `post-${r._id}`,
+                         type: 'post',
+                         date: new Date(r.createdAt || Date.now()),
+                         report: r
+                       });
+                       
+                       r.comments?.forEach((c: any) => {
+                         // Comments on my post
+                         if (c.user !== profileUser?._id) {
+                           activities.push({
+                             id: `comment-${r._id}-${c._id || Math.random()}`,
+                             type: 'comment_received',
+                             date: new Date(c.createdAt || Date.now()),
+                             report: r,
+                             comment: c
+                           });
+                         }
+                       });
+                     });
+
+                     savedReports.forEach(r => {
+                       activities.push({
+                         id: `saved-${r._id}`,
+                         type: 'saved',
+                         date: new Date(r.createdAt || Date.now()),
+                         report: r
+                       });
+                     });
+
+                     activities.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+                     if (activities.length === 0) {
+                        return (
+                          <div className="text-center py-20 bg-[#1A282D] rounded-xl border border-dashed border-[#27353B]">
+                             <div className="w-16 h-16 bg-[#27353B] rounded-full flex items-center justify-center mx-auto mb-4">
+                                <FileText className="text-gray-400" />
+                             </div>
+                             <h3 className="font-bold text-white">No activity yet</h3>
+                          </div>
+                        );
+                     }
+
+                     return activities.map(act => (
+                        <div key={act.id} className="bg-[#1A282D] p-4 rounded-xl border border-[#27353B] flex gap-4 transition-colors hover:border-[#3A4A51] cursor-pointer" onClick={() => navigate(`/report/${act.report._id}`)}>
+                           <div className="flex flex-col items-center gap-1 w-8 pt-1">
+                             {act.type === 'post' && <TrendingUp size={16} className="text-gray-500" />}
+                             {act.type === 'comment_received' && <FileText size={16} className="text-emerald-500" />}
+                             {act.type === 'saved' && <Bookmark size={16} className="text-blue-500 fill-blue-500" />}
+                           </div>
+                           <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 text-xs text-gray-400 font-medium">
+                                 {act.type === 'post' && <span className="text-white font-bold">You posted this</span>}
+                                 {act.type === 'comment_received' && <span className="text-emerald-400 font-bold">{act.comment.userName || 'Someone'} commented on your post</span>}
+                                 {act.type === 'saved' && <span className="text-blue-400 font-bold">You saved this</span>}
+                                 <span>•</span>
+                                 <span>{act.date.toLocaleDateString()}</span>
+                              </div>
+                              {act.type === 'comment_received' && (
+                                <div className="p-3 bg-[#0B1416] rounded-lg mb-3 border border-[#27353B] text-sm text-gray-300">
+                                  "{act.comment.text}"
+                                </div>
+                              )}
+                              <h3 className="font-bold text-white text-base mb-1">{act.report.title}</h3>
+                              <p className="text-sm text-gray-500 line-clamp-1 mb-2">{act.report.description}</p>
+                           </div>
+                        </div>
+                     ));
+                  })()}
+
+                  {/* Reports Feed */}
+                  {['reports'].includes(activeTab) && myReports.map(report => (
+                    <div key={report._id} className="bg-[#1A282D] p-4 rounded-xl border border-[#27353B] flex gap-4 transition-colors hover:border-[#3A4A51] cursor-pointer" onClick={() => navigate(`/report/${report._id}`)}>
+                       <div className="flex flex-col items-center gap-1 w-8">
+                         <TrendingUp size={16} className="text-gray-500 hover:text-orange-500 transition-colors" />
+                         <span className="text-xs font-bold">{report.upvotes || 0}</span>
+                       </div>
+                       <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 text-xs text-gray-400 font-medium">
+                             <span className="bg-[#27353B] px-2 py-0.5 rounded-sm">{report.category}</span>
+                             <span>•</span>
+                             <span>{(() => {
+                                 const date = new Date(report.createdAt || Date.now());
+                                 const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+                                 let interval = seconds / 31536000;
+                                 if (interval > 1) return Math.floor(interval) + 'y ago';
+                                 interval = seconds / 2592000;
+                                 if (interval > 1) return Math.floor(interval) + 'mo ago';
+                                 interval = seconds / 86400;
+                                 if (interval > 1) return Math.floor(interval) + 'd ago';
+                                 interval = seconds / 3600;
+                                 if (interval > 1) return Math.floor(interval) + 'h ago';
+                                 interval = seconds / 60;
+                                 if (interval > 1) return Math.floor(interval) + 'm ago';
+                                 return 'Just now';
+                             })()}</span>
+                          </div>
+                          <h3 className="font-bold text-white text-lg mb-1">{report.title}</h3>
+                          <p className="text-sm text-gray-400 line-clamp-2 mb-3">{report.description}</p>
+                          <div className="flex items-center gap-4 text-xs font-bold text-gray-500">
+                             <span className="flex items-center gap-1 hover:bg-[#27353B] px-2 py-1 rounded-sm"><MapPin size={14}/> {report.location?.formattedAddress || 'Seattle, WA'}</span>
+                             <span className="flex items-center gap-1 hover:bg-[#27353B] px-2 py-1 rounded-sm"><Share size={14}/> Share</span>
+                          </div>
+                       </div>
+                       {report.imageUrl && report.imageUrl !== 'no-photo.jpg' && (
+                         <div className="w-24 h-24 rounded-lg overflow-hidden hidden sm:block">
+                           <img src={report.imageUrl} className="w-full h-full object-cover" alt="Report" />
+                         </div>
+                       )}
+                    </div>
+                  ))}
+
+                  {/* Saved Feed */}
+                  {['saved'].includes(activeTab) && savedReports.map(report => (
+                    <div key={report._id} className="bg-[#1A282D] p-4 rounded-xl border border-[#27353B] flex gap-4 transition-colors hover:border-[#3A4A51] cursor-pointer" onClick={() => navigate(`/report/${report._id}`)}>
+                       <div className="flex flex-col items-center gap-1 w-8 mt-1">
+                         <Bookmark size={16} className="text-blue-500 fill-blue-500" />
+                       </div>
+                       <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 text-xs text-gray-400 font-medium">
+                             <span>c/{report.category}</span>
+                          </div>
+                          <h3 className="font-bold text-white text-base mb-1">{report.title}</h3>
+                       </div>
+                    </div>
+                  ))}
+
+                  {!loading && myReports.length === 0 && activeTab === 'reports' && (
+                     <div className="text-center py-20 bg-[#1A282D] rounded-xl border border-dashed border-[#27353B]">
+                        <div className="w-16 h-16 bg-[#27353B] rounded-full flex items-center justify-center mx-auto mb-4">
+                           <FileText className="text-gray-400" />
+                        </div>
+                        <h3 className="font-bold text-white">No reports yet</h3>
+                     </div>
+                  )}
+
+                  {!loading && savedReports.length === 0 && activeTab === 'saved' && (
+                     <div className="text-center py-20 bg-[#1A282D] rounded-xl border border-dashed border-[#27353B]">
+                        <div className="w-16 h-16 bg-[#27353B] rounded-full flex items-center justify-center mx-auto mb-4">
+                           <Bookmark className="text-gray-400" />
+                        </div>
+                        <h3 className="font-bold text-white">No saved reports</h3>
+                     </div>
+                  )}
+                </>
+              )}
+           </div>
+        </div>
+
+        {/* Right Sidebar - Dynamic User Panel */}
+        <div className="w-full lg:w-[320px] shrink-0">
+           <div className="bg-[#1A282D] rounded-xl border border-[#27353B] overflow-hidden sticky top-20">
               
-              <div className="flex-1 text-center md:text-left">
-                 <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-1">{profileUser?.name}</h1>
-                 <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">@{profileUser?.username || profileUser?.name?.toLowerCase().replace(/\s/g, '') || 'citizen'}</p>
-                 {profileUser?.bio && <p className="text-gray-600 dark:text-gray-300 italic mb-2">{profileUser.bio}</p>}
-                 {profileUser?.location && <div className="flex items-center justify-center md:justify-start gap-1 text-gray-500 dark:text-gray-400 text-sm font-bold uppercase tracking-wider mb-2"><MapPin size={12} /> {profileUser.location}</div>}
-                 
-                 {isOwnProfile && <p className="text-gray-500 dark:text-gray-400 font-medium mb-4">{profileUser?.email}</p>}
-                 
-                 {!isOwnProfile && (
-                   <p className="text-sm text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-4">
-                     {profileUser?.followersCount || 0} Followers · {profileUser?.followingCount || 0} Following
-                   </p>
-                 )}
-
-                 <div className="flex flex-wrap justify-center md:justify-start gap-3">
-                    <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                      <Award size={14} /> {profileUser?.rank || 'Citizen'}
-                    </span>
-                    <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                      <Calendar size={14} /> Member since {new Date(profileUser?.createdAt || Date.now()).getFullYear()}
-                    </span>
-                 </div>
+              {/* Banner Area */}
+              <div className="h-24 bg-gradient-to-br from-blue-900 via-indigo-900 to-[#1A282D] relative">
+                 <button className="absolute top-3 right-3 p-1.5 bg-black/30 hover:bg-black/50 rounded-full transition-colors backdrop-blur-sm">
+                   <Share size={14} className="text-white" />
+                 </button>
               </div>
 
-              <div className="flex gap-3">
+              {/* Profile Card Content */}
+              <div className="p-4 pt-12 relative animate-in fade-in duration-300">
+                 <div className="absolute -top-10 left-4 w-16 h-16 rounded-xl border-4 border-[#1A282D] bg-[#27353B] overflow-hidden shadow-lg">
+                    <img 
+                       src={profileUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileUser?.name || 'User'}`} 
+                       className="w-full h-full object-cover bg-[#0B1416]" 
+                       alt={profileUser?.name} 
+                    />
+                 </div>
+
+                 <h2 className="text-lg font-black text-white">{profileUser?.name || 'Citizen'}</h2>
+                 <p className="text-xs text-gray-400 font-medium mb-4">u/{profileUser?.username || 'user'}</p>
+
                  {!isOwnProfile ? (
                    <button 
                      onClick={handleFollowToggle}
                      disabled={followLoading}
-                     className={`px-6 py-3 rounded-xl font-bold transition-all shadow-lg ${isFollowing 
-                       ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700' 
-                       : 'bg-primary text-white hover:bg-blue-700 shadow-primary/30'}`}
+                     className={`w-full py-2 mb-6 rounded-full font-bold text-sm transition-colors flex justify-center items-center gap-2 ${
+                       isFollowing 
+                       ? 'border border-[#D7DADC] text-[#D7DADC] hover:bg-[#27353B]' 
+                       : 'bg-white text-black hover:bg-gray-200'
+                     }`}
                    >
                      {followLoading ? '...' : isFollowing ? 'Following' : 'Follow'}
                    </button>
                  ) : (
-                   <>
-                      <button 
-                        onClick={openEditModal}
-                        className="px-6 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl text-gray-900 dark:text-white font-bold transition-colors"
-                      >
-                         Edit Profile
+                   <button 
+                     onClick={() => {
+                        const baseUrl = window.location.origin;
+                        navigator.clipboard.writeText(`${baseUrl}/profile/${profileUser?._id}`);
+                        alert('Profile link copied!');
+                     }}
+                     className="w-full py-2 mb-6 rounded-full font-bold text-sm border border-[#D7DADC] text-[#D7DADC] hover:bg-[#27353B] transition-colors flex justify-center items-center gap-2"
+                   >
+                     <Share size={16} /> Share Profile
+                   </button>
+                 )}
+
+                 {/* Stats Grid */}
+                 <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <div className="text-lg font-bold text-white mb-0.5">{profileUser?.followers?.length || profileUser?.followersCount || 0}</div>
+                      <div className="text-[10px] uppercase font-bold tracking-wider text-gray-500">Followers</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-white mb-0.5">{impactScore}</div>
+                      <div className="text-[10px] uppercase font-bold tracking-wider text-gray-500">Karma</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-white mb-0.5 mt-2 flex items-center gap-1">
+                        <Calendar size={12} className="text-gray-500" />
+                        {new Date(profileUser?.createdAt || Date.now()).toLocaleDateString(undefined, { year: '2-digit', month: 'short'})}
+                      </div>
+                      <div className="text-[10px] uppercase font-bold tracking-wider text-gray-500">Civix Age</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-white mb-0.5 mt-2 flex items-center gap-1">
+                        <FileText size={12} className="text-blue-500" />
+                        {totalReports}
+                      </div>
+                      <div className="text-[10px] uppercase font-bold tracking-wider text-gray-500">Contributions</div>
+                    </div>
+                 </div>
+
+                 {/* Achievements */}
+                 <div className="mb-6 pt-6 border-t border-[#27353B]">
+                    <h3 className="text-xs uppercase font-bold tracking-wider text-gray-500 mb-3 block">Achievements</h3>
+                    <div className="flex gap-2 items-center">
+                       <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-500 to-orange-400 flex items-center justify-center p-1 shadow-md shadow-orange-500/20" title="Newcomer">
+                         <Award size={16} className="text-white" />
+                       </div>
+                       {resolvedReports > 0 && (
+                         <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center p-1 shadow-md shadow-emerald-500/20" title="Problem Solver">
+                           <CheckCircle2 size={16} className="text-white" />
+                         </div>
+                       )}
+                       <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center p-1 shadow-md shadow-purple-500/20" title="Feed Finder">
+                         <Eye size={16} className="text-white" />
+                       </div>
+                    </div>
+                 </div>
+
+                 {/* Settings / Owner Controls */}
+                 {isOwnProfile && (
+                   <div className="pt-6 border-t border-[#27353B] space-y-4">
+                      <h3 className="text-xs uppercase font-bold tracking-wider text-gray-500 mb-2 block">Settings</h3>
+                      
+                      <div className="flex items-center justify-between group">
+                         <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-[#27353B] flex items-center justify-center"><Edit3 size={14} /></div>
+                            <div>
+                               <div className="text-sm font-bold text-white">Profile</div>
+                               <div className="text-[10px] text-gray-500 font-medium">Customize your profile</div>
+                            </div>
+                         </div>
+                         <button onClick={openEditModal} className="px-3 py-1 bg-[#27353B] hover:bg-[#3A4A51] rounded-full text-xs font-bold text-white transition-colors">Update</button>
+                      </div>
+
+                      <div className="flex items-center justify-between group">
+                         <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-[#27353B] flex items-center justify-center"><Settings size={14} /></div>
+                            <div>
+                               <div className="text-sm font-bold text-white">Account</div>
+                               <div className="text-[10px] text-gray-500 font-medium">Manage preferences</div>
+                            </div>
+                         </div>
+                         <button onClick={() => navigate('/account')} className="px-3 py-1 bg-[#27353B] hover:bg-[#3A4A51] rounded-full text-xs font-bold text-white transition-colors">Settings</button>
+                      </div>
+
+                      <button onClick={logout} className="w-full mt-4 flex items-center justify-center gap-2 py-2 border border-red-500/20 text-red-400 hover:bg-red-500/10 rounded-xl text-sm font-bold transition-colors">
+                        <LogOut size={16} /> Log Out
                       </button>
-                      <button 
-                        onClick={() => navigate('/account')}
-                        className="p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl text-gray-600 dark:text-gray-300 transition-colors"
-                        title="Account Settings"
-                      >
-                         <Settings size={20} />
-                      </button>
-                      <button 
-                        onClick={logout}
-                        className="p-3 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl text-red-600 dark:text-red-400 transition-colors"
-                      >
-                         <LogOut size={20} />
-                      </button>
-                    </>
+                   </div>
                  )}
               </div>
            </div>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-           <StatCard 
-             icon={<TrendingUp className="text-orange-500" />} 
-             label="Impact Score" 
-             value={impactScore.toString()} 
-             sub="Top 5% in Seattle" 
-           />
-           <StatCard 
-             icon={<FileText className="text-blue-500" />} 
-             label="Issues Reported" 
-             value={totalReports.toString()} 
-             sub={`${resolvedReports} Resolved`} 
-           />
-           <StatCard 
-             icon={<Shield className="text-purple-500" />} 
-             label="Verification Level" 
-             value="Level 2" 
-             sub="Phone Verified" 
-           />
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-6 border-b border-gray-100 dark:border-gray-800 mb-6">
-           <button 
-             onClick={() => setActiveTab('reports')}
-             className={`pb-3 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${activeTab === 'reports' ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-600 dark:hover:text-gray-300'}`}
-           >
-              My Activity
-           </button>
-           <button 
-             onClick={() => setActiveTab('saved')}
-             className={`pb-3 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${activeTab === 'saved' ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-600 dark:hover:text-gray-300'}`}
-           >
-              Saved Reports
-           </button>
-        </div>
-
-        <h2 className="text-xl font-black text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-           {activeTab === 'reports' ? <FileText className="text-gray-400" /> : <Bookmark className="text-gray-400" />} 
-           {activeTab === 'reports' ? 'Resolution History' : 'Saved Issues'}
-        </h2>
-
-        {loading ? (
-           <div className="flex justify-center py-20">
-             <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-           </div>
-        ) : (activeTab === 'reports' ? myReports : savedReports).length > 0 ? (
-           <div className="space-y-4">
-              {(activeTab === 'reports' ? myReports : savedReports).map(report => (
-                <div key={report._id} className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 flex gap-4 transition-transform hover:scale-[1.01] cursor-pointer" onClick={() => navigate(`/edit-report/${report._id}`)}>
-                   <img 
-                     src={report.imageUrl !== 'no-photo.jpg' ? report.imageUrl : "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=200"} 
-                     className="w-20 h-20 rounded-xl object-cover" 
-                     alt="Report" 
-                   />
-                   <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-1">
-                         <span className="text-[10px] uppercase font-black tracking-wider text-gray-400 mb-1 block">{report.category}</span>
-                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                           report.status === 'resolved' ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600'
-                         }`}>
-                           {report.status}
-                         </span>
-                      </div>
-                      <h3 className="font-bold text-gray-900 dark:text-white truncate">{report.title}</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1 mt-1">{report.description}</p>
-                      <div className="flex items-center gap-4 mt-3 text-xs text-gray-400 font-medium">
-                         <span className="flex items-center gap-1"><TrendingUp size={12}/> {report.upvotes || 0} Upvotes</span>
-                         <span className="flex items-center gap-1"><MapPin size={12}/> {report.location.formattedAddress || 'Seattle, WA'}</span>
-                      </div>
-                   </div>
-                </div>
-              ))}
-           </div>
-        ) : (
-           <div className="text-center py-20 bg-white dark:bg-gray-900 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
-              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                 <FileText className="text-gray-400" />
-              </div>
-              <h3 className="font-bold text-gray-900 dark:text-white">No reports yet</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{activeTab === 'reports' ? "Submit your first civic issue today!" : "Bookmark important issues to see them here."}</p>
-           </div>
-        )}
-      </div>
-
-      {/* Edit Profile Modal */}
+      {/* Edit Profile Modal (Dark Mode Optimized) */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#1A282D] w-full max-w-md rounded-2xl p-6 shadow-2xl border border-[#27353B] animate-in fade-in zoom-in duration-200">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-black text-gray-900 dark:text-white">Edit Profile</h3>
-              <button 
-                onClick={() => setIsEditModalOpen(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-500"
-              >
+              <h3 className="text-xl font-black text-white">Edit Profile</h3>
+              <button onClick={() => setIsEditModalOpen(false)} className="p-2 hover:bg-[#27353B] rounded-full text-gray-400 transition-colors">
                 <X size={20} />
               </button>
             </div>
             
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-bold uppercase text-gray-500 mb-1 block">Full Name</label>
-                <input 
-                  type="text" 
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                  className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-primary outline-none"
-                />
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1 block">Full Name</label>
+                <input type="text" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} className="w-full p-3 bg-[#0B1416] text-white rounded-xl border border-[#27353B] focus:border-blue-500 outline-none transition-colors" />
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase text-gray-500 mb-1 block">Username</label>
-                <input 
-                  type="text" 
-                  value={editForm.username}
-                  onChange={(e) => setEditForm({...editForm, username: e.target.value})}
-                  className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-primary outline-none"
-                />
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1 block">Username</label>
+                <input type="text" value={editForm.username} onChange={(e) => setEditForm({...editForm, username: e.target.value})} className="w-full p-3 bg-[#0B1416] text-white rounded-xl border border-[#27353B] focus:border-blue-500 outline-none transition-colors" />
               </div>
               
               <div>
-                <label className="text-xs font-bold uppercase text-gray-500 mb-1 block">Bio</label>
-                <textarea 
-                  value={editForm.bio}
-                  onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
-                  className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-primary outline-none h-24 resize-none"
-                  placeholder="Tell us about yourself..."
-                />
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1 block">Bio</label>
+                <textarea value={editForm.bio} onChange={(e) => setEditForm({...editForm, bio: e.target.value})} className="w-full p-3 bg-[#0B1416] text-white rounded-xl border border-[#27353B] focus:border-blue-500 outline-none h-24 resize-none transition-colors" placeholder="Tell us about yourself..." />
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase text-gray-500 mb-1 block">Location</label>
-                <input 
-                  type="text" 
-                  value={editForm.location}
-                  onChange={(e) => setEditForm({...editForm, location: e.target.value})}
-                  className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-primary outline-none"
-                  placeholder="City, State"
-                />
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1 block">Location</label>
+                <input type="text" value={editForm.location} onChange={(e) => setEditForm({...editForm, location: e.target.value})} className="w-full p-3 bg-[#0B1416] text-white rounded-xl border border-[#27353B] focus:border-blue-500 outline-none transition-colors" placeholder="City, State" />
               </div>
 
                <div>
-                <label className="text-xs font-bold uppercase text-gray-500 mb-1 block">Avatar URL or Upload</label>
-                <div className="flex gap-2">
-                   <input 
-                     type="text" 
-                     value={editForm.avatar}
-                     onChange={(e) => setEditForm({...editForm, avatar: e.target.value})}
-                     className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border-none focus:ring-2 focus:ring-primary outline-none"
-                     placeholder="https://..."
-                   />
-                   <div className="relative">
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        onChange={(e) => {
-                          if (e.target.files?.[0]) {
-                            setAvatarFile(e.target.files[0]);
-                          }
-                        }}
-                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                      />
-                      <button type="button" className="h-full px-4 bg-gray-100 dark:bg-gray-800 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transaction-colors flex items-center justify-center whitespace-nowrap">
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1 block">Avatar URL or Upload</label>
+                <div className="flex gap-2 items-center">
+                   <input type="text" value={editForm.avatar} onChange={(e) => setEditForm({...editForm, avatar: e.target.value})} className="flex-1 p-3 bg-[#0B1416] text-white rounded-xl border border-[#27353B] focus:border-blue-500 outline-none transition-colors text-sm" placeholder="https://..." />
+                   <div className="relative shrink-0 w-24">
+                      <input type="file" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) setAvatarFile(e.target.files[0]); }} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                      <button type="button" className="w-full h-11 bg-[#27353B] hover:bg-[#3A4A51] rounded-xl font-bold text-white transition-colors flex items-center justify-center text-xs uppercase tracking-wider">
                         {avatarFile ? 'Selected' : 'Upload'}
                       </button>
                    </div>
                 </div>
               </div>
 
-              <div className="pt-4 flex gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="flex-1 py-3 font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={editLoading}
-                  className="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50"
-                >
+              <div className="pt-6 flex gap-3">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 py-3 font-bold text-gray-400 hover:text-white hover:bg-[#27353B] rounded-xl transition-colors">Cancel</button>
+                <button type="submit" disabled={editLoading} className="flex-1 py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50">
                   {editLoading ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
@@ -440,19 +532,5 @@ const ProfilePage: React.FC = () => {
     </div>
   );
 };
-
-const StatCard = ({ icon, label, value, sub }: { icon: React.ReactNode, label: string, value: string, sub: string }) => (
-  <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group">
-     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity scale-150 transform translate-x-1/4 -translate-y-1/4">
-       {icon}
-     </div>
-     <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">{icon}</div>
-        <span className="text-xs font-bold uppercase tracking-widest text-gray-400">{label}</span>
-     </div>
-     <div className="text-3xl font-black text-gray-900 dark:text-white mb-1">{value}</div>
-     <div className="text-xs font-medium text-emerald-500">{sub}</div>
-  </div>
-);
 
 export default ProfilePage;
