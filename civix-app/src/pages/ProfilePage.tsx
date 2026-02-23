@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { getReports } from '../services/reportService';
 import type { Report } from '../services/reportService';
 import { 
-  MapPin, Calendar, Award, TrendingUp, FileText, 
+  Calendar, Award, TrendingUp, FileText, 
   Settings, LogOut, ChevronLeft, Bookmark, Share, Eye, Edit3, X, CheckCircle2
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -17,7 +17,7 @@ const ProfilePage: React.FC = () => {
   const [profileUser, setProfileUser] = useState<any>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [savedReports, setSavedReports] = useState<Report[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'reports' | 'saved'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'posts' | 'comments' | 'saved'>('overview');
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
@@ -45,7 +45,7 @@ const ProfilePage: React.FC = () => {
           if (!user) return;
           setProfileUser(user);
           
-          if (activeTab === 'overview' || activeTab === 'reports') {
+          if (['overview', 'posts', 'comments'].includes(activeTab)) {
             const data = await getReports({ user: user.id });
             setReports(data.data);
           }
@@ -138,7 +138,7 @@ const ProfilePage: React.FC = () => {
   const totalUpvotes = myReports.reduce((acc, curr) => acc + (curr.upvotes || 0), 0);
   const impactScore = (resolvedReports * 50) + (totalUpvotes * 10) + (totalReports * 5);
 
-  const tabs: ('overview' | 'reports' | 'saved')[] = isOwnProfile ? ['overview', 'reports', 'saved'] : ['overview', 'reports'];
+  const tabs: ('overview' | 'posts' | 'comments' | 'saved')[] = isOwnProfile ? ['overview', 'posts', 'comments', 'saved'] : ['overview', 'posts', 'comments'];
 
   return (
     <div className="min-h-screen bg-[#0B1416] text-[#D7DADC] font-sans pb-20">
@@ -192,8 +192,8 @@ const ProfilePage: React.FC = () => {
                 <div className="py-20 flex justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>
               ) : (
                 <>
-                  {/* Overview Layout */}
-                  {activeTab === 'overview' && (() => {
+                  {/* Feed Rendering Engine */}
+                  {['overview', 'posts', 'comments', 'saved'].includes(activeTab) && (() => {
                      const activities: any[] = [];
                      
                      myReports.forEach(r => {
@@ -229,18 +229,27 @@ const ProfilePage: React.FC = () => {
 
                      activities.sort((a, b) => b.date.getTime() - a.date.getTime());
 
-                     if (activities.length === 0) {
+                     // Apply Filter based on Tab
+                     const filteredActivities = activities.filter(act => {
+                       if (activeTab === 'overview') return true;
+                       if (activeTab === 'posts') return act.type === 'post';
+                       if (activeTab === 'comments') return act.type === 'comment_received';
+                       if (activeTab === 'saved') return act.type === 'saved';
+                       return true;
+                     });
+
+                     if (filteredActivities.length === 0) {
                         return (
                           <div className="text-center py-20 bg-[#1A282D] rounded-xl border border-dashed border-[#27353B]">
                              <div className="w-16 h-16 bg-[#27353B] rounded-full flex items-center justify-center mx-auto mb-4">
                                 <FileText className="text-gray-400" />
                              </div>
-                             <h3 className="font-bold text-white">No activity yet</h3>
+                             <h3 className="font-bold text-white">No {activeTab} yet</h3>
                           </div>
                         );
                      }
 
-                     return activities.map(act => (
+                     return filteredActivities.map(act => (
                         <div key={act.id} className="bg-[#1A282D] p-4 rounded-xl border border-[#27353B] flex gap-4 transition-colors hover:border-[#3A4A51] cursor-pointer" onClick={() => navigate(`/report/${act.report._id}`)}>
                            <div className="flex flex-col items-center gap-1 w-8 pt-1">
                              {act.type === 'post' && <TrendingUp size={16} className="text-gray-500" />}
@@ -249,8 +258,8 @@ const ProfilePage: React.FC = () => {
                            </div>
                            <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1 text-xs text-gray-400 font-medium">
-                                 {act.type === 'post' && <span className="text-white font-bold">You posted this</span>}
-                                 {act.type === 'comment_received' && <span className="text-emerald-400 font-bold">{act.comment.userName || 'Someone'} commented on your post</span>}
+                                 {act.type === 'post' && <span className="text-white font-bold">{isOwnProfile ? 'You posted this' : `${profileUser?.name} posted this`}</span>}
+                                 {act.type === 'comment_received' && <span className="text-emerald-400 font-bold">{act.comment.userName || 'Someone'} commented on {isOwnProfile ? 'your' : 'this'} post</span>}
                                  {act.type === 'saved' && <span className="text-blue-400 font-bold">You saved this</span>}
                                  <span>•</span>
                                  <span>{act.date.toLocaleDateString()}</span>
@@ -267,80 +276,7 @@ const ProfilePage: React.FC = () => {
                      ));
                   })()}
 
-                  {/* Reports Feed */}
-                  {['reports'].includes(activeTab) && myReports.map(report => (
-                    <div key={report._id} className="bg-[#1A282D] p-4 rounded-xl border border-[#27353B] flex gap-4 transition-colors hover:border-[#3A4A51] cursor-pointer" onClick={() => navigate(`/report/${report._id}`)}>
-                       <div className="flex flex-col items-center gap-1 w-8">
-                         <TrendingUp size={16} className="text-gray-500 hover:text-orange-500 transition-colors" />
-                         <span className="text-xs font-bold">{report.upvotes || 0}</span>
-                       </div>
-                       <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 text-xs text-gray-400 font-medium">
-                             <span className="bg-[#27353B] px-2 py-0.5 rounded-sm">{report.category}</span>
-                             <span>•</span>
-                             <span>{(() => {
-                                 const date = new Date(report.createdAt || Date.now());
-                                 const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-                                 let interval = seconds / 31536000;
-                                 if (interval > 1) return Math.floor(interval) + 'y ago';
-                                 interval = seconds / 2592000;
-                                 if (interval > 1) return Math.floor(interval) + 'mo ago';
-                                 interval = seconds / 86400;
-                                 if (interval > 1) return Math.floor(interval) + 'd ago';
-                                 interval = seconds / 3600;
-                                 if (interval > 1) return Math.floor(interval) + 'h ago';
-                                 interval = seconds / 60;
-                                 if (interval > 1) return Math.floor(interval) + 'm ago';
-                                 return 'Just now';
-                             })()}</span>
-                          </div>
-                          <h3 className="font-bold text-white text-lg mb-1">{report.title}</h3>
-                          <p className="text-sm text-gray-400 line-clamp-2 mb-3">{report.description}</p>
-                          <div className="flex items-center gap-4 text-xs font-bold text-gray-500">
-                             <span className="flex items-center gap-1 hover:bg-[#27353B] px-2 py-1 rounded-sm"><MapPin size={14}/> {report.location?.formattedAddress || 'Seattle, WA'}</span>
-                             <span className="flex items-center gap-1 hover:bg-[#27353B] px-2 py-1 rounded-sm"><Share size={14}/> Share</span>
-                          </div>
-                       </div>
-                       {report.imageUrl && report.imageUrl !== 'no-photo.jpg' && (
-                         <div className="w-24 h-24 rounded-lg overflow-hidden hidden sm:block">
-                           <img src={report.imageUrl} className="w-full h-full object-cover" alt="Report" />
-                         </div>
-                       )}
-                    </div>
-                  ))}
 
-                  {/* Saved Feed */}
-                  {['saved'].includes(activeTab) && savedReports.map(report => (
-                    <div key={report._id} className="bg-[#1A282D] p-4 rounded-xl border border-[#27353B] flex gap-4 transition-colors hover:border-[#3A4A51] cursor-pointer" onClick={() => navigate(`/report/${report._id}`)}>
-                       <div className="flex flex-col items-center gap-1 w-8 mt-1">
-                         <Bookmark size={16} className="text-blue-500 fill-blue-500" />
-                       </div>
-                       <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 text-xs text-gray-400 font-medium">
-                             <span>c/{report.category}</span>
-                          </div>
-                          <h3 className="font-bold text-white text-base mb-1">{report.title}</h3>
-                       </div>
-                    </div>
-                  ))}
-
-                  {!loading && myReports.length === 0 && activeTab === 'reports' && (
-                     <div className="text-center py-20 bg-[#1A282D] rounded-xl border border-dashed border-[#27353B]">
-                        <div className="w-16 h-16 bg-[#27353B] rounded-full flex items-center justify-center mx-auto mb-4">
-                           <FileText className="text-gray-400" />
-                        </div>
-                        <h3 className="font-bold text-white">No reports yet</h3>
-                     </div>
-                  )}
-
-                  {!loading && savedReports.length === 0 && activeTab === 'saved' && (
-                     <div className="text-center py-20 bg-[#1A282D] rounded-xl border border-dashed border-[#27353B]">
-                        <div className="w-16 h-16 bg-[#27353B] rounded-full flex items-center justify-center mx-auto mb-4">
-                           <Bookmark className="text-gray-400" />
-                        </div>
-                        <h3 className="font-bold text-white">No saved reports</h3>
-                     </div>
-                  )}
                 </>
               )}
            </div>

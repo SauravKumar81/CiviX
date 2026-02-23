@@ -116,7 +116,7 @@ exports.getReport = async (req, res, next) => {
   try {
     const report = await Report.findById(req.params.id).populate({
       path: 'user',
-      select: 'name rank'
+      select: 'name username rank avatar'
     });
 
     if (!report) {
