@@ -18,8 +18,10 @@ describe('Civix API CRUD Tests', () => {
   let reportId;
 
   beforeAll(async () => {
-    await mongoose.connect(process.env.MONGO_URI);
-    // Cleanup
+    // Use a separate test database
+    const testUri = process.env.MONGO_URI.replace(/\/[^/]+$/, '/civix-test');
+    await mongoose.connect(testUri);
+    // Cleanup test database
     await mongoose.connection.db.dropDatabase();
   });
 
@@ -33,6 +35,7 @@ describe('Civix API CRUD Tests', () => {
       .post('/api/auth/register')
       .send({
         name: 'Test User',
+        username: 'testuser',
         email: 'test@example.com',
         password: 'password123'
       });

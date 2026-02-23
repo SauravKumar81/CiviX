@@ -17,18 +17,29 @@ exports.getReports = async (req, res, next) => {
       query['location.state'] = req.query.state;
     }
     if (req.query.user) {
-      query.user = req.query.user;
+      if (req.query.user.match(/^[0-9a-fA-F]{24}$/)) {
+        query.user = req.query.user;
+      } else {
+        // Assume it's a username (handle @ prefix if present)
+        const userObj = await User.findOne({ username: req.query.user.replace(/^@/, '') });
+        if (userObj) {
+          query.user = userObj._id;
+        } else {
+          // User not found by username, return empty
+          return res.status(200).json({ success: true, count: 0, data: [] });
+        }
+      }
     }
 
     // Filter by Following
     if (req.query.following === 'true' && req.user) {
-         const currentUser = await User.findById(req.user.id);
-         if (currentUser && currentUser.following.length > 0) {
-             query.user = { $in: currentUser.following };
-         } else {
-             // If following no one, return nothing for this filter
-             return res.status(200).json({ success: true, count: 0, data: [] });
-         }
+      const currentUser = await User.findById(req.user.id);
+      if (currentUser && currentUser.following.length > 0) {
+        query.user = { $in: currentUser.following };
+      } else {
+        // If following no one, return nothing for this filter
+        return res.status(200).json({ success: true, count: 0, data: [] });
+      }
     }
 
     // Geospatial Query ($near)
@@ -64,7 +75,7 @@ exports.getReports = async (req, res, next) => {
 
     let reports = await Report.find(query).populate({
       path: 'user',
-      select: 'name rank avatar'
+      select: 'name username rank avatar'
     });
 
     // Custom Sorting Logic
@@ -77,15 +88,15 @@ exports.getReports = async (req, res, next) => {
     } else if (req.query.sort === 'newest') {
       reports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     } else if (req.query.lat && req.query.lng) {
-        // Geospatial sort happens implicitly or via our previous custom sort
-        reports.sort((a, b) => {
-            const scoreA = (a.isVerified ? 100 : 0) + (a.upvotes || 0) + (a.shares || 0) * 2;
-            const scoreB = (b.isVerified ? 100 : 0) + (b.upvotes || 0) + (b.shares || 0) * 2;
-            return scoreB - scoreA;
-        });
+      // Geospatial sort happens implicitly or via our previous custom sort
+      reports.sort((a, b) => {
+        const scoreA = (a.isVerified ? 100 : 0) + (a.upvotes || 0) + (a.shares || 0) * 2;
+        const scoreB = (b.isVerified ? 100 : 0) + (b.upvotes || 0) + (b.shares || 0) * 2;
+        return scoreB - scoreA;
+      });
     } else {
-        // Default: Newest
-        reports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      // Default: Newest
+      reports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
     res.status(200).json({
@@ -132,7 +143,7 @@ exports.createReport = async (req, res, next) => {
     console.log('File:', req.file ? req.file.path : 'NO FILE');
 
     const reportData = { ...req.body };
-    
+
     // Add user to reportData
     if (!req.user) {
       return res.status(401).json({ success: false, message: 'Not authorized' });
@@ -210,8 +221,8 @@ exports.updateReport = async (req, res, next) => {
 
     // Extract hashtags from description if it's being updated
     if (updateData.description) {
-         const tags = updateData.description.match(/#[a-z0-9_]+/gi) || [];
-         updateData.tags = [...new Set(tags.map(tag => tag.substring(1).toLowerCase()))];
+      const tags = updateData.description.match(/#[a-z0-9_]+/gi) || [];
+      updateData.tags = [...new Set(tags.map(tag => tag.substring(1).toLowerCase()))];
     }
 
     report = await Report.findByIdAndUpdate(req.params.id, updateData, {
@@ -269,6 +280,7 @@ exports.addComment = async (req, res, next) => {
     const comment = {
       user: req.user.id,
       userName: req.user.name,
+      userAvatar: req.user.avatar,
       text: req.body.text
     };
 
@@ -298,12 +310,6 @@ exports.shareReport = async (req, res, next) => {
 
     report.shares = (report.shares || 0) + 1;
 
-    await report.save();
-
-    res.status(200).json({
-      success: true,
-      data: report
-    });
     await report.save();
 
     res.status(200).json({

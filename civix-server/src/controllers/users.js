@@ -74,7 +74,7 @@ exports.followUser = async (req, res, next) => {
     }
 
     if (userToFollow._id.toString() === req.user.id) {
-        return res.status(400).json({ success: false, message: 'Cannot follow yourself' });
+      return res.status(400).json({ success: false, message: 'Cannot follow yourself' });
     }
 
     // Add to following list if not already there
@@ -126,31 +126,46 @@ exports.unfollowUser = async (req, res, next) => {
 // @access  Public
 exports.getUserProfile = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id)
-      .select('-password -email') // Hide sensitive info
-      .populate('followers', 'name rank')
-      .populate('following', 'name rank');
+    let user;
+
+    // Check if valid ObjectId
+    if (req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      user = await User.findById(req.params.id)
+        .select('-password -email')
+        .populate('followers', 'name rank')
+        .populate('following', 'name rank');
+    } else {
+      // Try finding by username
+      user = await User.findOne({ username: req.params.id.replace(/^@/, '') })
+        .select('-password -email')
+        .populate('followers', 'name rank')
+        .populate('following', 'name rank');
+    }
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     // Get basic stats
-    const reports = await Report.find({ user: req.params.id });
+    const reports = await Report.find({ user: user._id });
     const reportCount = reports.length;
     const upvotes = reports.reduce((acc, curr) => acc + (curr.upvotes || 0), 0);
 
     const profileData = {
-        _id: user._id,
-        name: user.name,
-        rank: user.rank,
-        createdAt: user.createdAt,
-        followersCount: user.followers.length,
-        followingCount: user.following.length,
-        reportCount,
-        impactScore: (reportCount * 5) + (upvotes * 10),
-        followers: user.followers, // Send minimal list
-        following: user.following
+      _id: user._id,
+      name: user.name,
+      username: user.username,
+      bio: user.bio,
+      location: user.location,
+      avatar: user.avatar,
+      rank: user.rank,
+      createdAt: user.createdAt,
+      followersCount: user.followers.length,
+      followingCount: user.following.length,
+      reportCount,
+      impactScore: (reportCount * 5) + (upvotes * 10),
+      followers: user.followers, // Send minimal list
+      following: user.following
     };
 
     res.status(200).json({ success: true, data: profileData });
@@ -169,8 +184,24 @@ exports.updateUserProfile = async (req, res, next) => {
       email: req.body.email,
       bio: req.body.bio,
       location: req.body.location,
-      avatar: req.body.avatar
     };
+
+    if (req.file) {
+      fieldsToUpdate.avatar = req.file.path;
+    } else if (req.body.avatar) {
+      // Support manual URL input too
+      fieldsToUpdate.avatar = req.body.avatar;
+    }
+
+    if (req.body.username) {
+      if (req.body.username !== req.user.username) {
+        const userExists = await User.findOne({ username: req.body.username });
+        if (userExists) {
+          return res.status(400).json({ success: false, message: 'Username already taken' });
+        }
+        fieldsToUpdate.username = req.body.username;
+      }
+    }
 
     const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
       new: true,

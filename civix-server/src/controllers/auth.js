@@ -6,13 +6,32 @@ const jwt = require('jsonwebtoken');
 // @access  Public
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, username, email, password } = req.body;
+
+    // Validate fields exist
+    if (!name || !username || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Please provide all required fields' });
+    }
+
+    // Check if username unique
+    const userExists = await User.findOne({ username });
+    if (userExists) {
+      return res.status(400).json({ success: false, message: 'Username already taken' });
+    }
+
+    // Check if email unique
+    const emailExists = await User.findOne({ email });
+    if (emailExists) {
+      return res.status(400).json({ success: false, message: 'Email already exists' });
+    }
 
     // Create user
     const user = await User.create({
       name,
+      username,
       email,
-      password
+      password,
+      role: 'user'
     });
 
     sendTokenResponse(user, 200, res);
@@ -87,17 +106,28 @@ exports.googleAuth = async (req, res, next) => {
     const payload = ticket.getPayload();
     const { email, name } = payload;
 
+
+
     // Check if user exists
     let user = await User.findOne({ email });
 
     if (!user) {
-      // User doesn't exist, redirect frontend to signup with pre-filled info
-      return res.status(404).json({
-        success: false,
-        newUser: true,
-        email,
+      // Auto-register the user with generated username
+      let baseUsername = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      let randomSuffix = Math.random().toString(36).substring(2, 6);
+      let newUsername = `${baseUsername}${randomSuffix}`;
+
+      // Ensure uniqueness (simple check, collision unlikely but good to have)
+      while (await User.findOne({ username: newUsername })) {
+        randomSuffix = Math.random().toString(36).substring(2, 6);
+        newUsername = `${baseUsername}${randomSuffix}`;
+      }
+
+      user = await User.create({
         name,
-        message: 'User does not exist. Please create an account.'
+        email,
+        username: newUsername,
+        password: Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2)
       });
     }
 
@@ -119,6 +149,17 @@ exports.updateDetails = async (req, res, next) => {
     if (req.body.bio) fieldsToUpdate.bio = req.body.bio;
     if (req.body.location) fieldsToUpdate.location = req.body.location;
 
+    // Check if username is being updated and is unique
+    if (req.body.username) {
+      if (req.body.username !== req.user.username) {
+        const userExists = await User.findOne({ username: req.body.username });
+        if (userExists) {
+          return res.status(400).json({ success: false, message: 'Username already taken' });
+        }
+        fieldsToUpdate.username = req.body.username;
+      }
+    }
+
     // Check for uploaded file
     if (req.file) {
       fieldsToUpdate.avatar = req.file.path;
@@ -133,6 +174,38 @@ exports.updateDetails = async (req, res, next) => {
       success: true,
       data: user
     });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+};
+
+// @desc    Update password
+// @route   PUT /api/auth/updatepassword
+// @access  Private
+exports.updatePassword = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select('+password');
+
+    if (!(await user.matchPassword(req.body.currentPassword))) {
+      return res.status(401).json({ success: false, message: 'Incorrect password' });
+    }
+
+    user.password = req.body.newPassword;
+    await user.save();
+
+    sendTokenResponse(user, 200, res);
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+};
+
+// @desc    Delete account
+// @route   DELETE /api/auth/deleteaccount
+// @access  Private
+exports.deleteAccount = async (req, res, next) => {
+  try {
+    await User.findByIdAndDelete(req.user.id);
+    res.status(200).json({ success: true, data: {} });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
