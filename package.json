@@ -1,0 +1,11 @@
+{
+    "name": "civix-root",
+    "private": true,
+    "scripts": {
+        "install-all": "npm install --prefix civix-server && npm install --prefix civix-app",
+        "dev": "concurrently \"npm run dev --prefix civix-server\" \"npm run dev --prefix civix-app\""
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    }
+}
