@@ -92,12 +92,19 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // @access  Public
 exports.googleAuth = async (req, res, next) => {
   try {
-    const { idToken } = req.body;
+    const { idToken, autoRegister = false } = req.body;
 
     if (!idToken) {
-      return res.status(400).json({ success: false, message: 'Google ID token required' });
+      console.log('Google Auth Error: Missing idToken');
+      return res.status(400).json({ success: false, error: 'Google ID token required' });
     }
 
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      console.error('SERVER CONFIG ERROR: GOOGLE_CLIENT_ID is not set in .env');
+      return res.status(500).json({ success: false, error: 'Server configuration error' });
+    }
+
+    console.log('Verifying Google Token...');
     const ticket = await client.verifyIdToken({
       idToken,
       audience: process.env.GOOGLE_CLIENT_ID
@@ -105,43 +112,66 @@ exports.googleAuth = async (req, res, next) => {
 
     const payload = ticket.getPayload();
     const { email, name, picture } = payload;
-
-
+    console.log(`Google Auth attempt for: ${email}`);
 
     // Check if user exists
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email }).select('+password');
 
     if (!user) {
-      // Auto-register the user with generated username
-      let baseUsername = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!autoRegister) {
+        console.log(`New user detected (${email}), redirecting to signup.`);
+        return res.status(404).json({
+          success: false,
+          newUser: true,
+          email,
+          name,
+          error: 'No account found. Please finish signing up.'
+        });
+      }
+
+      console.log(`Auto-registering new user: ${email}`);
+      // Generate safe username
+      // Truncate name to 15 chars to ensure total length <= 20 with suffix
+      let baseUsername = (name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 15);
       let randomSuffix = Math.random().toString(36).substring(2, 6);
       let newUsername = `${baseUsername}${randomSuffix}`;
 
-      // Ensure uniqueness (simple check, collision unlikely but good to have)
-      while (await User.findOne({ username: newUsername })) {
+      // Check for collisions
+      let collision = await User.findOne({ username: newUsername });
+      while (collision) {
         randomSuffix = Math.random().toString(36).substring(2, 6);
         newUsername = `${baseUsername}${randomSuffix}`;
+        collision = await User.findOne({ username: newUsername });
       }
 
       user = await User.create({
-        name,
+        name: name || 'Google User',
         email,
         username: newUsername,
-        password: Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2),
+        password: Math.random().toString(36).substring(2, 10) + 'A1!',
         avatar: picture || undefined
       });
 
+      console.log(`User created successfully: ${user.username}`);
       return sendTokenResponse(user, 201, res, true);
-    } else if (picture && !user.avatar?.includes('googleusercontent.com')) {
-      // Update missing or default avatar with Google avatar if available
+    } 
+
+    // Update avatar if missing or generic
+    if (picture && (!user.avatar || user.avatar.includes('api.dicebear.com'))) {
       user.avatar = picture;
       await user.save();
+      console.log(`Updated avatar for user: ${email}`);
     }
 
+    console.log(`Login successful for user: ${email}`);
     sendTokenResponse(user, 200, res, false);
   } catch (err) {
-    console.error('Google Auth Error:', err);
-    res.status(400).json({ success: false, error: 'Google authentication failed' });
+    console.error('GOOGLE_AUTH_ERROR:', err.message);
+    res.status(400).json({ 
+      success: false, 
+      error: 'Google authentication failed',
+      details: err.message 
+    });
   }
 };
 

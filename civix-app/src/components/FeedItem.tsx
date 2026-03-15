@@ -10,7 +10,7 @@ import {
 const getCityColor = (city: string) => {
   const colors = [
     'bg-emerald-500 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400', 
-    'bg-blue-500 border-blue-200 text-blue-700 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-400', 
+    'bg-violet-500 border-violet-200 text-violet-700 dark:bg-violet-500/10 dark:border-violet-500/20 dark:text-violet-400', 
     'bg-purple-500 border-purple-200 text-purple-700 dark:bg-purple-500/10 dark:border-purple-500/20 dark:text-purple-400', 
     'bg-orange-500 border-orange-200 text-orange-700 dark:bg-orange-500/10 dark:border-orange-500/20 dark:text-orange-400', 
     'bg-pink-500 border-pink-200 text-pink-700 dark:bg-pink-500/10 dark:border-pink-500/20 dark:text-pink-400', 
@@ -163,7 +163,7 @@ const FeedItem = ({
                <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                  status === 'pending' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
                  status === 'resolved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400'
                }`}>
                  {status}
                </span>
@@ -241,7 +241,7 @@ const FeedItem = ({
              <span className="px-1 text-sm text-gray-900 dark:text-gray-200">{engagement.likes && engagement.likes !== '0' ? engagement.likes : 'Vote'}</span>
              <button 
                onClick={(e) => { e.stopPropagation(); }}
-               className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-blue-500 transition-colors"
+               className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-violet-500 transition-colors"
              >
                <ArrowBigDown className="w-5 h-5" />
              </button>
@@ -289,7 +289,7 @@ const FeedItem = ({
                    <button 
                      type="submit"
                      disabled={!commentText.trim()}
-                     className="p-1.5 bg-primary text-white rounded-full disabled:opacity-50 hover:bg-blue-600 transition-colors"
+                     className="p-1.5 bg-primary text-white rounded-full disabled:opacity-50 hover:bg-violet-600 transition-colors"
                    >
                      <ChevronRight size={14} />
                    </button>

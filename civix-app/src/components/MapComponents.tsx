@@ -123,7 +123,7 @@ export const MapTool = ({ icon, label }: { icon: React.ReactNode; label: string 
 export const SideIcon = ({ icon, active = false, onClick }: { icon: React.ReactNode; active?: boolean; onClick?: () => void }) => (
   <div 
     onClick={onClick}
-    className={`p-3 rounded-2xl transition-all ${active ? 'bg-blue-50 dark:bg-blue-900/20 text-primary shadow-sm' : 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'}`}
+    className={`p-3 rounded-2xl transition-all ${active ? 'bg-violet-50 dark:bg-violet-900/20 text-primary shadow-sm' : 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'}`}
   >
     {icon}
   </div>

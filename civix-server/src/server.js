@@ -21,9 +21,11 @@ const app = express();
 app.use(express.json());
 
 // Enable CORS
-app.use(cors(
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  credentials: true,
 
-));
+}));
 
 // Logging
 if (process.env.NODE_ENV === 'development') {

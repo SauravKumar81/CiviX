@@ -62,7 +62,7 @@ const SignupPage: React.FC = () => {
           </div>
           <div>
             <h1 className="text-6xl font-black tracking-tighter mb-4 leading-tight">Join the<br />Movement.</h1>
-            <p className="text-xl text-blue-100/80 font-medium leading-relaxed">
+            <p className="text-xl text-violet-100/80 font-medium leading-relaxed">
               Every voice counts. Join Civix to help build a more responsive and transparent community.
             </p>
           </div>
@@ -158,7 +158,7 @@ const SignupPage: React.FC = () => {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full h-14 bg-primary text-white font-black rounded-2xl hover:bg-blue-600 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group disabled:opacity-50"
+              className="w-full h-14 bg-primary text-white font-black rounded-2xl hover:bg-violet-600 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group disabled:opacity-50"
             >
               {loading ? 'Creating Account...' : (
                 <>
@@ -179,25 +179,37 @@ const SignupPage: React.FC = () => {
             <div className="flex flex-col items-center gap-4">
               <GoogleLogin 
                 onSuccess={async (credentialResponse: any) => {
+                  console.log('Google Signup Success Callback', credentialResponse.credential ? 'Token found' : 'No token');
                   if (!credentialResponse.credential) return;
                   setLoading(true);
+                  setError('');
                   try {
-                    const result = await googleAuth(credentialResponse.credential);
+                    console.log('Sending Google Auth request with register=true');
+                    const result = await googleAuth(credentialResponse.credential, true);
+                    console.log('Google Auth API Result:', result);
                     if (result.token) {
                       await authLogin(result.token);
                       if (result.newUser) {
+                        console.log('New user created, navigating to profile-setup');
                         navigate('/profile-setup');
                       } else {
-                        navigate('/');
+                        console.log('Existing user logged in from signup page, navigating to feed');
+                        navigate('/feed');
                       }
                     }
-                  } catch (err) {
-                    setError('Google signup failed');
+                  } catch (err: any) {
+                    console.error('Google Signup Error:', err);
+                    const message = err.response?.data?.error || 'Google signup failed';
+                    const details = err.response?.data?.details ? ` (${err.response.data.details})` : '';
+                    setError(`${message}${details}`);
                   } finally {
                     setLoading(false);
                   }
                 }}
-                onError={() => setError('Google signup failed')}
+                onError={() => {
+                  console.error('Google signup component error');
+                  setError('Google component failed to initialize');
+                }}
                 theme="filled_blue"
                 shape="pill"
                 text="continue_with"

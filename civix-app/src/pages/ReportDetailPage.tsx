@@ -81,7 +81,7 @@ const ReportDetailPage = () => {
   if (error || !report) return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col items-center justify-center gap-4">
           <p className="text-gray-500">{error || 'Report not found'}</p>
-          <button onClick={() => navigate('/')} className="text-primary hover:underline">Go Home</button>
+          <button onClick={() => navigate('/feed')} className="text-primary hover:underline">Go Home</button>
       </div>
   );
 

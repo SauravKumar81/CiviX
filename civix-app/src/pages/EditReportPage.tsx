@@ -92,7 +92,7 @@ const EditReportPage: React.FC = () => {
     if (!fetching && reportOwnerId && user) {
       if (reportOwnerId !== user.id && user.role !== 'admin') {
          setError('You are not authorized to edit this report.');
-         setTimeout(() => navigate('/'), 2000);
+         setTimeout(() => navigate('/feed'), 2000);
       }
     }
   }, [fetching, reportOwnerId, user, navigate]);
@@ -173,7 +173,7 @@ const EditReportPage: React.FC = () => {
       }
 
       await updateReport(id, formData); // Type cast since service might expect Partial<Report>
-      navigate('/');
+      navigate('/feed');
     } catch (err) {
       const errorMessage = axios.isAxiosError(err) 
         ? err.response?.data?.message || err.response?.data?.error || err.message 
@@ -219,7 +219,7 @@ const EditReportPage: React.FC = () => {
           <h2 className="text-sm font-black text-gray-900 dark:text-gray-200 uppercase tracking-widest">Update Status</h2>
           <div className="flex gap-3">
              <button onClick={() => setStatus('pending')} className={`flex-1 py-3 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all border-2 ${status === 'pending' ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-500 text-orange-600' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 text-gray-400'}`}>Pending</button>
-             <button onClick={() => setStatus('in-progress')} className={`flex-1 py-3 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all border-2 ${status === 'in-progress' ? 'bg-blue-50 dark:bg-blue-900/20 border-primary text-primary' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 text-gray-400'}`}>In Progress</button>
+             <button onClick={() => setStatus('in-progress')} className={`flex-1 py-3 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all border-2 ${status === 'in-progress' ? 'bg-violet-50 dark:bg-violet-900/20 border-primary text-primary' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 text-gray-400'}`}>In Progress</button>
              <button onClick={() => setStatus('resolved')} className={`flex-1 py-3 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all border-2 ${status === 'resolved' ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500 text-emerald-600' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 text-gray-400'}`}>Resolved</button>
           </div>
         </section>
@@ -314,7 +314,7 @@ const EditReportPage: React.FC = () => {
         <button 
           onClick={handleSubmit}
           disabled={loading}
-          className="w-full h-20 bg-primary hover:bg-blue-700 text-white font-black rounded-[28px] shadow-2xl shadow-primary/30 flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] group mt-12 disabled:opacity-50"
+          className="w-full h-20 bg-primary hover:bg-violet-700 text-white font-black rounded-[28px] shadow-2xl shadow-primary/30 flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] group mt-12 disabled:opacity-50"
         >
           {loading ? (
             <div className="flex items-center gap-3">
@@ -334,7 +334,7 @@ const EditReportPage: React.FC = () => {
 };
 
 const CategoryCard = ({ label, icon: Icon, active = false, onClick }: { label: string, icon: LucideIcon, active?: boolean, onClick: () => void }) => (
-  <button onClick={onClick} className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${active ? 'bg-blue-50 dark:bg-blue-900/20 border-primary' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800'}`}>
+  <button onClick={onClick} className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${active ? 'bg-violet-50 dark:bg-violet-900/20 border-primary' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800'}`}>
     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${active ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
       <Icon size={20} />
     </div>

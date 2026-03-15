@@ -133,7 +133,7 @@ const ReportIssuePage: React.FC = () => {
       }
 
       await createReport(formData);
-      navigate('/');
+      navigate('/feed');
     } catch (err) {
       const errorMessage = axios.isAxiosError(err) 
         ? err.response?.data?.message || err.response?.data?.error || err.message 
@@ -148,7 +148,7 @@ const ReportIssuePage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 font-sans transition-colors duration-300">
       {/* Top Header */}
       <header className="sticky top-0 z-30 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex items-center gap-4 transition-colors shadow-sm">
-        <Link to="/" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 transition-colors">
+        <Link to="/feed" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 transition-colors">
           <ChevronLeft className="w-6 h-6" />
         </Link>
         <div>
@@ -212,7 +212,7 @@ const ReportIssuePage: React.FC = () => {
               />
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-24 h-24 flex-shrink-0 bg-gray-50 dark:bg-gray-950 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col items-center justify-center gap-2 group hover:border-primary hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all"
+                className="w-24 h-24 flex-shrink-0 bg-gray-50 dark:bg-gray-950 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col items-center justify-center gap-2 group hover:border-primary hover:bg-violet-50/50 dark:hover:bg-violet-900/10 transition-all"
               >
                 <Camera className="w-6 h-6 text-gray-400 group-hover:text-primary transition-colors" />
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest group-hover:text-primary transition-colors">Add Photo</span>
@@ -239,7 +239,7 @@ const ReportIssuePage: React.FC = () => {
              <h2 className="text-xs font-black text-gray-900 dark:text-gray-200 uppercase tracking-widest">Location</h2>
              <button 
                 onClick={handleDetectLocation}
-                className="text-[10px] font-black text-primary flex items-center gap-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-3 py-1.5 rounded-lg transition-colors"
+                className="text-[10px] font-black text-primary flex items-center gap-1 hover:bg-violet-50 dark:hover:bg-violet-900/20 px-3 py-1.5 rounded-lg transition-colors"
                 disabled={showLocationCheck}
              >
                <MapPin className={`w-3 h-3 ${showLocationCheck ? 'animate-bounce' : ''}`} />
@@ -271,7 +271,7 @@ const ReportIssuePage: React.FC = () => {
         <button 
           onClick={handleSubmit}
           disabled={loading}
-          className="w-full h-16 bg-gradient-to-r from-primary to-blue-600 hover:to-blue-700 text-white font-black rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-3 transition-all transform active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full h-16 bg-gradient-to-r from-primary to-violet-600 hover:to-violet-700 text-white font-black rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-3 transition-all transform active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
             <div className="flex items-center gap-3">

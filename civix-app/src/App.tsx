@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import HomeFeed from './pages/HomeFeed';
@@ -53,7 +54,15 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
-              <Route path="/" element={<HomeFeed />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route 
+                path="/feed" 
+                element={
+                  <ProtectedRoute>
+                    <HomeFeed />
+                  </ProtectedRoute>
+                } 
+              />
               <Route 
                 path="/report" 
                 element={

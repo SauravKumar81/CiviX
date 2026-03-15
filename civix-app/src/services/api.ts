@@ -23,7 +23,11 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Only redirect if NOT on login or signup pages to avoid breaking the auth flow itself
+      const path = window.location.pathname;
+      if (path !== '/login' && path !== '/signup') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

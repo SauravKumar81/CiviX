@@ -33,7 +33,7 @@ const ProfileSetupPage: React.FC = () => {
     try {
       // If no new image is selected, we just skip/continue with the default
       if (!imageFile) {
-         navigate('/');
+         navigate('/feed');
          return;
       }
 
@@ -74,7 +74,7 @@ const ProfileSetupPage: React.FC = () => {
           
           // Actually, to update the context immediately, we might need to expose a method.
           // But for a simple flow:
-          navigate('/');
+          navigate('/feed');
            window.location.reload(); // Quick hack to ensure context updates with new avatar
       }
 
@@ -86,7 +86,7 @@ const ProfileSetupPage: React.FC = () => {
   };
 
   const handleSkip = () => {
-    navigate('/');
+    navigate('/feed');
   };
 
   return (

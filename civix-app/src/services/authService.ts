@@ -35,8 +35,8 @@ export const getBookmarks = async () => {
   return response.data;
 };
 
-export const googleAuth = async (idToken: string): Promise<AuthResponse & { newUser?: boolean; email?: string; name?: string }> => {
-  const response = await api.post('/auth/google', { idToken });
+export const googleAuth = async (idToken: string, autoRegister = false): Promise<AuthResponse & { newUser?: boolean; email?: string; name?: string }> => {
+  const response = await api.post('/auth/google', { idToken, autoRegister });
   if (response.data.token) {
     localStorage.setItem('token', response.data.token);
   }
@@ -52,14 +52,7 @@ export const isAuthenticated = () => {
   return !!localStorage.getItem('token');
 };
 
-export const followUser = async (id: string) => {
-  const response = await api.put(`/users/follow/${id}`);
-  return response.data;
-};
-export const unfollowUser = async (id: string) => {
-  const response = await api.put(`/users/unfollow/${id}`);
-  return response.data;
-};
+
 export const getPublicProfile = async (id: string) => {
   const response = await api.get(`/users/${id}`);
   return response.data;

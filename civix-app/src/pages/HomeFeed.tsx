@@ -25,7 +25,7 @@ const HomeFeed: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activeFilter, setActiveFilter] = useState<'local' | 'global' | 'mine' | 'following'>('global');
+  const [activeFilter, setActiveFilter] = useState<'local' | 'global' | 'mine'>('global');
   const [userLocation, setUserLocation] = useState<{ city?: string; state?: string; latitude?: number; longitude?: number } | null>(null);
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -46,7 +46,7 @@ const HomeFeed: React.FC = () => {
     }).catch(console.error);
   }, []);
 
-  const fetchReports = async (filterOverride?: 'local' | 'global' | 'mine' | 'following') => {
+  const fetchReports = async (filterOverride?: 'local' | 'global' | 'mine') => {
     setLoading(true);
     try {
       const filter = filterOverride || activeFilter;
@@ -62,39 +62,6 @@ const HomeFeed: React.FC = () => {
          filters = { city: userLocation.city, state: userLocation.state };
       } else if (filter === 'mine' && user?.id) {
         filters = { user: user.id };
-      } else if (filter === 'following') {
-         // Assuming backend supports ?following=true logic or similar
-         // For now, if backend doesn't support it directly, we might need a specific endpoint
-         // BUT, since we implemented `getReports`, we can add a simple client-side filter or 
-         // ideally, the backend should handle this. 
-         // Let's assume we pass a special flag or handle it by fetching followed users first.
-         // Actually, let's update `getReports` service/backend to handle `following` if possible,
-         // or just pass `following=true` and let backend handle it if we updated it.
-         // Wait, I didn't update `getReports` controller to handle `following`.
-         // I should probably do that for scalability.
-         // For MVP, I will filter client side OR fetch my following list and pass `user` array.
-         // Let's passed `following=true` and I'll fallback to a simple client-side filter if needed 
-         // but strictly speaking, I should have updated the backend controller.
-         // Let's check `reports.js` controller again. I didn't add it.
-         // I'll add `following` to query params passing to backend, but backend ignores it currently.
-         // I will simply modify this later. For now, let's rely on an additional step:
-         if (user?.following && user.following.length > 0) {
-            // Check if user.following is populated or just IDs.
-            // In AuthContext user might just have IDs.
-            // Let's try passing the list of IDs if the backend supports `user: { $in: [] }`
-            // My previous view of reports.js showed `if (req.query.user) query.user = req.query.user`.
-            // It doesn't look like it supports array.
-            // I'll stick to 'global' for now or handle this in a separate task.
-            // ACTUALLY, I'll filter client side for now to get it working immediately 
-            // without another backend roundtrip in this step.
-            // Oh wait, `getReports` returns everything.
-            // Let's just pass a new param `following=true` and I will update backend `reports.js` quickly.
-            filters = { following: 'true' };
-         } else {
-             setReports([]);
-             setLoading(false);
-             return;
-         }
       }
       
       if (activeTag) {
@@ -152,7 +119,7 @@ const HomeFeed: React.FC = () => {
     fetchReports();
   }, [activeTag]);
 
-  const handleFilterChange = (filter: 'local' | 'global' | 'mine' | 'following') => {
+  const handleFilterChange = (filter: 'local' | 'global' | 'mine') => {
     setActiveFilter(filter);
     fetchReports(filter);
   };
@@ -244,115 +211,117 @@ const HomeFeed: React.FC = () => {
           {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
 
-        {/* Logo Section */}
-        <div className={`p-6 flex items-center gap-2 mb-8 ${isSidebarCollapsed ? 'lg:justify-center' : ''}`}>
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-            <div className="w-5 h-4 bg-white rounded-sm" />
+        <div className="flex flex-col flex-1 min-h-0 pt-4 pb-4">
+          {/* Logo Section */}
+          <div className={`px-4 flex items-center gap-2 mb-4 ${isSidebarCollapsed ? 'lg:justify-center' : ''}`}>
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-5 h-4 bg-white rounded-sm" />
+            </div>
+            <div className={`${isSidebarCollapsed ? 'lg:hidden' : 'block'}`}>
+              <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white leading-none">Civix</h1>
+              <p className="text-[10px] text-gray-400 font-medium lowercase">Citizen Power</p>
+            </div>
           </div>
-          <div className={`${isSidebarCollapsed ? 'lg:hidden' : 'block'}`}>
-            <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white leading-none">Civix</h1>
-            <p className="text-[10px] text-gray-400 font-medium lowercase">Citizen Power</p>
-          </div>
-        </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-4 space-y-1">
-          <NavItem 
-            icon={<Home className="w-5 h-5" />} 
-            label="Home" 
-            active={activeFilter === 'global' && location.pathname === '/'} 
-            collapsed={isSidebarCollapsed} 
-            onClick={() => handleFilterChange('global')}
-          />
-          <NavItem 
-            icon={<Compass className="w-5 h-5" />} 
-            label="Explore" 
-            active={false} 
-            collapsed={isSidebarCollapsed} 
-            onClick={() => navigate('/map')}
-          />
-          
-          {/* Reports Group */}
-          <div className={`mt-6 mb-2 px-2 text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
+          {/* Navigation */}
+          <nav className="flex-1 px-4 space-y-1">
+            <NavItem 
+              icon={<Home className="w-5 h-5" />} 
+              label="Home" 
+              active={activeFilter === 'global' && location.pathname === '/'} 
+              collapsed={isSidebarCollapsed} 
+              onClick={() => handleFilterChange('global')}
+            />
+            <NavItem 
+              icon={<Compass className="w-5 h-5" />} 
+              label="Explore" 
+              active={false} 
+              collapsed={isSidebarCollapsed} 
+              onClick={() => navigate('/map')}
+            />
+            
+            {/* Reports Group */}
+          <div className={`mt-4 mb-1 px-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
             Reports
           </div>
-          
-          <NavItem 
-            icon={<MapPin className="w-5 h-5" />} 
-            label="State and City" 
-            active={activeFilter === 'local'} 
-            collapsed={isSidebarCollapsed} 
-            onClick={() => handleFilterChange('local')}
-          />
-          <NavItem 
-            icon={<Compass className="w-5 h-5" />} 
-            label="All Country Reports" 
-            active={activeFilter === 'global' && location.pathname !== '/'} 
-            collapsed={isSidebarCollapsed} 
-            onClick={() => handleFilterChange('global')}
-          />
-          <NavItem 
-            icon={<FileText className="w-5 h-5" />} 
-            label="My Reports" 
-            active={activeFilter === 'mine'} 
-            collapsed={isSidebarCollapsed} 
-            onClick={() => {
-              if (!isAuthenticated) return navigate('/login');
-              handleFilterChange('mine');
-            }} 
-          />
+            
+            <NavItem 
+              icon={<MapPin className="w-5 h-5" />} 
+              label="State and City" 
+              active={activeFilter === 'local'} 
+              collapsed={isSidebarCollapsed} 
+              onClick={() => handleFilterChange('local')}
+            />
+            <NavItem 
+              icon={<Compass className="w-5 h-5" />} 
+              label="All Country Reports" 
+              active={activeFilter === 'global' && location.pathname !== '/'} 
+              collapsed={isSidebarCollapsed} 
+              onClick={() => handleFilterChange('global')}
+            />
+            <NavItem 
+              icon={<FileText className="w-5 h-5" />} 
+              label="My Reports" 
+              active={activeFilter === 'mine'} 
+              collapsed={isSidebarCollapsed} 
+              onClick={() => {
+                if (!isAuthenticated) return navigate('/login');
+                handleFilterChange('mine');
+              }} 
+            />
 
-          <div className="my-4 border-t border-gray-100 dark:border-gray-800" />
+            <div className="my-2 border-t border-gray-100 dark:border-gray-800" />
 
-          <NavItem 
-            icon={<Bell className="w-5 h-5" />} 
-            label="Notifications" 
-            active={location.pathname === '/notifications'}
-            collapsed={isSidebarCollapsed} 
-            onClick={() => navigate('/')} 
-          />
-          <NavItem 
-            icon={<User className="w-5 h-5" />} 
-            label="Profile" 
-            active={location.pathname === '/profile'}
-            collapsed={isSidebarCollapsed} 
-            onClick={() => navigate('/profile')} 
-          />
-        </nav>
+            <NavItem 
+              icon={<Bell className="w-5 h-5" />} 
+              label="Notifications" 
+              active={location.pathname === '/notifications'}
+              collapsed={isSidebarCollapsed} 
+              onClick={() => navigate('/')} 
+            />
+            <NavItem 
+              icon={<User className="w-5 h-5" />} 
+              label="Profile" 
+              active={location.pathname === '/profile'}
+              collapsed={isSidebarCollapsed} 
+              onClick={() => navigate('/profile')} 
+            />
+          </nav>
 
-        {/* Bottom Section */}
-        <div className="px-4 pb-8 mt-auto space-y-4">
-          {/* Theme Toggle Button (Desktop Sidebar) */}
-          <button 
-            onClick={toggleTheme}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white ${isSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}
-          >
-            <div className="flex-shrink-0">
-              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-            </div>
-            <span className={isSidebarCollapsed ? 'lg:hidden' : 'block'}>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
-          </button>
-
-          <button 
-            onClick={() => navigate('/report')}
-            className={`w-full py-3 bg-primary text-white font-bold rounded-eight shadow-lg shadow-primary/20 flex items-center justify-center gap-2 ${isSidebarCollapsed ? 'px-0' : ''}`}
-          >
-            <Plus className="w-5 h-5 flex-shrink-0" />
-            <span className={isSidebarCollapsed ? 'lg:hidden' : 'block'}>Report Issue</span>
-          </button>
-          
-          <div 
-            onClick={() => navigate('/profile')}
-            className={`flex items-center p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 gap-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${isSidebarCollapsed ? 'lg:justify-center' : ''}`}
-          >
-            <img src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Guest'}`} className="w-10 h-10 rounded-full object-cover flex-shrink-0 bg-white" alt="User" />
-            {!isSidebarCollapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{user?.name || 'Guest User'}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">@{user?.username || user?.name?.toLowerCase().replace(/\s/g, '') || 'guest'}</p>
+          {/* Bottom Section */}
+        <div className="px-4 mt-auto pt-4 space-y-2">
+            {/* Theme Toggle Button (Desktop Sidebar) */}
+            <button 
+              onClick={toggleTheme}
+              className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white ${isSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}
+            >
+              <div className="flex-shrink-0">
+                {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
               </div>
-            )}
-            {!isSidebarCollapsed && <MoreHorizontal className="w-4 h-4 text-gray-400" />}
+              <span className={isSidebarCollapsed ? 'lg:hidden' : 'block'}>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
+            </button>
+
+            <button 
+              onClick={() => navigate('/report')}
+              className={`w-full py-3 bg-primary text-white font-bold rounded-eight shadow-lg shadow-primary/20 flex items-center justify-center gap-2 ${isSidebarCollapsed ? 'px-0' : ''}`}
+            >
+              <Plus className="w-5 h-5 flex-shrink-0" />
+              <span className={isSidebarCollapsed ? 'lg:hidden' : 'block'}>Report Issue</span>
+            </button>
+            
+            <div 
+              onClick={() => navigate('/profile')}
+              className={`flex items-center p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 gap-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${isSidebarCollapsed ? 'lg:justify-center' : ''}`}
+            >
+              <img src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Guest'}`} className="w-10 h-10 rounded-full object-cover flex-shrink-0 bg-white" alt="User" />
+              {!isSidebarCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{user?.name || 'Guest User'}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">@{user?.username || user?.name?.toLowerCase().replace(/\s/g, '') || 'guest'}</p>
+                </div>
+              )}
+              {!isSidebarCollapsed && <MoreHorizontal className="w-4 h-4 text-gray-400" />}
+            </div>
           </div>
         </div>
       </aside>
@@ -422,7 +391,7 @@ const HomeFeed: React.FC = () => {
                   </div>
                   <button 
                     onClick={() => navigate('/login')}
-                    className="px-8 py-2 bg-primary text-white text-xs font-black rounded-full hover:bg-blue-600 transition-all uppercase tracking-widest"
+                    className="px-8 py-2 bg-primary text-white text-xs font-black rounded-full hover:bg-violet-600 transition-all uppercase tracking-widest"
                   >
                     Sign In Now
                   </button>
@@ -432,7 +401,7 @@ const HomeFeed: React.FC = () => {
 
             <div className="flex border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-hide bg-white dark:bg-gray-950">
               <Tab label="Local Reports" active={activeFilter === 'local'} onClick={() => { handleFilterChange('local'); setActiveTag(null); }} />
-              <Tab label="Following" active={activeFilter === 'following'} onClick={() => { handleFilterChange('following'); setActiveTag(null); }} />
+
               <Tab label="Priority Hub" active={activeFilter === 'global'} onClick={() => { handleFilterChange('global'); setActiveTag(null); }} />
             </div>
 
@@ -568,9 +537,9 @@ const HomeFeed: React.FC = () => {
                 <TrendingUp className="w-4 h-4 text-green-500" />
               </h3>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50/50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-50 dark:border-blue-900/30">
-                  <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase mb-1">Reports Solved</p>
-                  <p className="text-2xl font-black text-blue-700 dark:text-blue-300">124</p>
+                <div className="bg-violet-50/50 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-50 dark:border-violet-900/30">
+                  <p className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase mb-1">Reports Solved</p>
+                  <p className="text-2xl font-black text-violet-700 dark:text-violet-300">124</p>
                   <p className="text-[10px] text-green-600 dark:text-green-400 font-bold mt-1">+12% this month</p>
                 </div>
                 <div className="bg-teal-50/50 dark:bg-teal-900/20 p-4 rounded-xl border border-teal-50 dark:border-teal-900/30">
@@ -623,7 +592,7 @@ const HomeFeed: React.FC = () => {
 const NavItem = ({ icon, label, active = false, collapsed = false, onClick }: { icon: React.ReactNode, label: string, active?: boolean, collapsed?: boolean, onClick?: () => void }) => (
   <button 
     onClick={onClick}
-    className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${active ? 'bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400 shadow-sm shadow-blue-100/50 dark:shadow-none' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'} ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}
+    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${active ? 'bg-violet-50 dark:bg-violet-900/20 text-primary dark:text-violet-400 shadow-sm shadow-violet-100/50 dark:shadow-none' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'} ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}
   >
     <div className="flex-shrink-0">{icon}</div>
     <span className={collapsed ? 'lg:hidden' : 'block'}>{label}</span>

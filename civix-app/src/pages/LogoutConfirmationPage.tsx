@@ -37,7 +37,7 @@ const LogoutConfirmationPage: React.FC = () => {
             <LogOut className="w-5 h-5" />
           </button>
           
-          <Link to="/" className="block">
+          <Link to="/feed" className="block">
             <button className="w-full h-16 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white font-black rounded-2xl border border-transparent hover:border-gray-200 dark:hover:border-gray-700 flex items-center justify-center gap-3 transition-all active:scale-[0.98]">
               <ArrowLeft className="w-5 h-5" />
               BACK TO FEED

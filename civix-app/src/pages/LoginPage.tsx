@@ -16,24 +16,34 @@ const LoginPage: React.FC = () => {
   const { login: authContextLogin } = useAuth(); // Renamed to avoid conflict with service login
 
   const onGoogleSuccess = async (credentialResponse: any) => {
-    if (!credentialResponse.credential) return;
+    console.log('Google Success Callback Triggered', credentialResponse ? 'Has response' : 'No response');
+    if (!credentialResponse.credential) {
+      console.error('No credential in response');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
-      const result = await googleAuth(credentialResponse.credential);
+      console.log('Calling backend googleAuth service...');
+      const result = await googleAuth(credentialResponse.credential, false);
+      console.log('Backend response received:', result.success ? 'Success' : 'Fail');
       if (result.token) {
         await authContextLogin(result.token);
         if (result.newUser) {
           navigate('/profile-setup');
         } else {
-          navigate('/');
+          navigate('/feed');
         }
       }
     } catch (err: any) {
+      console.error('Google Auth Error Catch:', err);
       if (err.response?.status === 404 && err.response?.data?.newUser) {
+        console.log('New user detected, redirecting to signup');
         navigate('/signup', { state: { email: err.response.data.email, name: err.response.data.name } });
       } else {
-        setError('Google authentication failed');
+        const message = err.response?.data?.error || 'Google authentication failed';
+        const details = err.response?.data?.details ? ` (${err.response.data.details})` : '';
+        setError(`${message}${details}`);
       }
     } finally {
       setLoading(false);
@@ -85,10 +95,10 @@ const LoginPage: React.FC = () => {
           <div className="space-y-6 max-w-lg">
             <h1 className="text-6xl font-black text-white leading-[0.9] tracking-tighter">
               COLLECTIVE <br />
-              <span className="text-blue-200">POWER</span> FOR <br />
+              <span className="text-violet-200">POWER</span> FOR <br />
               YOUR CITY.
             </h1>
-            <p className="text-xl text-blue-100/80 font-medium leading-relaxed">
+            <p className="text-xl text-violet-100/80 font-medium leading-relaxed">
               Join thousands of citizens reporting issues and building better neighborhoods together.
             </p>
           </div>
@@ -133,7 +143,7 @@ const LoginPage: React.FC = () => {
               <div className="space-y-2 group">
                 <div className="flex justify-between items-center">
                   <label className="text-sm font-black text-gray-900 dark:text-gray-200 uppercase tracking-widest block transition-colors group-focus-within:text-primary">Password</label>
-                  <a href="#" className="text-sm font-bold text-primary hover:text-blue-700 transition-colors">Forgot Password?</a>
+                  <a href="#" className="text-sm font-bold text-primary hover:text-violet-700 transition-colors">Forgot Password?</a>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500 transition-colors group-focus-within:text-primary" />
@@ -151,7 +161,7 @@ const LoginPage: React.FC = () => {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full h-14 bg-primary hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-14 bg-primary hover:bg-violet-700 text-white font-black rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing In...' : 'Sign In'}
               {!loading && <ArrowRight className="w-5 h-5" />}
@@ -169,7 +179,10 @@ const LoginPage: React.FC = () => {
             <div className="flex flex-col items-center gap-4">
               <GoogleLogin 
                 onSuccess={onGoogleSuccess}
-                onError={() => setError('Google login failed')}
+                onError={() => {
+                  console.error('Google Login Component Error triggered');
+                  setError('Google login failed. Please check your internet connection or browser settings.');
+                }}
                 theme="filled_blue"
                 shape="pill"
                 text="continue_with"
@@ -179,7 +192,7 @@ const LoginPage: React.FC = () => {
           </form>
 
           <p className="text-center font-bold text-gray-500 dark:text-gray-400">
-            Don't have an account? <Link to="/signup" className="text-primary hover:text-blue-700 transition-colors">Create Account</Link>
+            Don't have an account? <Link to="/signup" className="text-primary hover:text-violet-700 transition-colors">Create Account</Link>
           </p>
         </div>
       </div>
@@ -196,10 +209,10 @@ type LucideIcon = React.FC<LucideIconProps>;
 const Stat = ({ icon: Icon, value, label }: { icon: LucideIcon, value: string, label: string }) => (
   <div className="space-y-1">
     <div className="flex items-center gap-2 text-white">
-      <Icon className="w-5 h-5 text-blue-200" />
+      <Icon className="w-5 h-5 text-violet-200" />
       <span className="text-2xl font-black">{value}</span>
     </div>
-    <p className="text-xs font-bold text-blue-100/60 uppercase tracking-widest">{label}</p>
+    <p className="text-xs font-bold text-violet-100/60 uppercase tracking-widest">{label}</p>
   </div>
 );
 

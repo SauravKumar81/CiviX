@@ -112,12 +112,12 @@ const TrendingMapPage: React.FC = () => {
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 font-sans overflow-hidden transition-colors duration-300">
       {/* Sidebar for navigation consistency */}
       <aside className="hidden lg:flex flex-col w-20 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 items-center py-8 z-50">
-        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mb-12 shadow-lg shadow-primary/20 cursor-pointer hover:scale-110 transition-transform" onClick={() => navigate('/')}>
+        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mb-12 shadow-lg shadow-primary/20 cursor-pointer hover:scale-110 transition-transform" onClick={() => navigate('/feed')}>
           <div className="w-6 h-5 bg-white rounded-sm" />
         </div>
         <div className="flex-1 flex flex-col gap-8">
           <SideIcon icon={<Compass className="text-primary" />} active />
-          <SideIcon icon={<Home className="text-gray-400 hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/')} />} />
+          <SideIcon icon={<Home className="text-gray-400 hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/feed')} />} />
           <SideIcon icon={<TrendingUp className="text-gray-400 hover:text-primary" />} />
         </div>
       </aside>
@@ -128,7 +128,7 @@ const TrendingMapPage: React.FC = () => {
         <header className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex flex-col gap-4 z-30 transition-colors">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link to="/" className="p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 transition-colors">
+              <Link to="/feed" className="p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 transition-colors">
                 <ChevronLeft className="w-6 h-6" />
               </Link>
               <div>
@@ -143,13 +143,13 @@ const TrendingMapPage: React.FC = () => {
             <div className="hidden sm:flex bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl border border-gray-100 dark:border-gray-700">
               <button 
                 onClick={() => setActiveTab('MAP')}
-                className={`px-6 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'MAP' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary dark:text-blue-400' : 'text-gray-400'}`}
+                className={`px-6 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'MAP' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary dark:text-violet-400' : 'text-gray-400'}`}
               >
                 <Navigation2 size={14} /> MAP
               </button>
               <button 
                 onClick={() => setActiveTab('LIST')}
-                className={`px-6 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'LIST' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary dark:text-blue-400' : 'text-gray-400'}`}
+                className={`px-6 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'LIST' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary dark:text-violet-400' : 'text-gray-400'}`}
               >
                 <List size={14} /> LIST
               </button>
@@ -232,19 +232,19 @@ const TrendingMapPage: React.FC = () => {
 
                 {/* Branch 3: Official (Right) */}
                 <div className="absolute right-0 top-80 w-[30%]">
-                   <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-blue-500 shadow-xl mb-6 relative z-10 ml-auto">
-                      <div className="absolute -top-3 -left-3 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white"><Shield size={16} /></div>
+                   <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-violet-500 shadow-xl mb-6 relative z-10 ml-auto">
+                      <div className="absolute -top-3 -left-3 w-8 h-8 bg-violet-500 rounded-full flex items-center justify-center text-white"><Shield size={16} /></div>
                       <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-wider text-right">Official</h3>
                       <p className="text-xs text-gray-400 font-bold uppercase text-right">City Updates</p>
                    </div>
-                   <div className="space-y-3 pr-4 border-r-2 border-blue-200 dark:border-blue-900/30 text-right">
-                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
-                           <h4 className="font-bold text-blue-900 dark:text-blue-100 text-sm">Main St. Closure</h4>
-                           <p className="text-[10px] text-blue-600 dark:text-blue-300 mt-1">Scheduled Maintenance • 2 days</p>
+                   <div className="space-y-3 pr-4 border-r-2 border-violet-200 dark:border-violet-900/30 text-right">
+                      <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-100 dark:border-violet-800 shadow-sm">
+                           <h4 className="font-bold text-violet-900 dark:text-violet-100 text-sm">Main St. Closure</h4>
+                           <p className="text-[10px] text-violet-600 dark:text-violet-300 mt-1">Scheduled Maintenance • 2 days</p>
                       </div>
-                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
-                           <h4 className="font-bold text-blue-900 dark:text-blue-100 text-sm">Town Hall Q&A</h4>
-                           <p className="text-[10px] text-blue-600 dark:text-blue-300 mt-1">Friday 6 PM • City Center</p>
+                      <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-100 dark:border-violet-800 shadow-sm">
+                           <h4 className="font-bold text-violet-900 dark:text-violet-100 text-sm">Town Hall Q&A</h4>
+                           <p className="text-[10px] text-violet-600 dark:text-violet-300 mt-1">Friday 6 PM • City Center</p>
                       </div>
                    </div>
                 </div>
@@ -413,8 +413,8 @@ const TrendingMapPage: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <button 
-                    onClick={() => navigate('/')}
-                    className="py-3 bg-primary text-white font-black rounded-2xl text-xs hover:bg-blue-600 transition-all uppercase tracking-wider"
+                    onClick={() => navigate('/feed')}
+                    className="py-3 bg-primary text-white font-black rounded-2xl text-xs hover:bg-violet-600 transition-all uppercase tracking-wider"
                   >
                     Go Home
                   </button>
