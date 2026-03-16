@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Users, Activity, Shield, ChevronRight, Menu, X, ArrowRight, Sparkles } from 'lucide-react';
+import { MapPin, Users, Activity, Shield, Menu, X, ArrowRight, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, type Variants } from 'framer-motion';
 
 const LandingPage: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -23,7 +23,7 @@ const LandingPage: React.FC = () => {
   }, [isAuthenticated, navigate]);
 
   // Framer motion variants
-  const fadeUp = {
+  const fadeUp: Variants = {
     hidden: { opacity: 0, y: 30 },
     visible: (custom: number) => ({
       opacity: 1,
@@ -32,7 +32,7 @@ const LandingPage: React.FC = () => {
     })
   };
 
-  const staggerContainer = {
+  const staggerContainer: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
