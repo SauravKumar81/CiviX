@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, User, Shield, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { register, googleAuth } from '../services/authService';
 import { GoogleLogin } from '@react-oauth/google';
@@ -57,8 +57,8 @@ const SignupPage: React.FC = () => {
       <div className="hidden lg:flex w-1/2 bg-primary relative overflow-hidden items-center justify-center p-24">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1)_0%,transparent_60%)]" />
         <div className="relative z-10 text-white space-y-8 max-w-lg">
-          <div className="w-20 h-20 bg-white/20 backdrop-blur-3xl rounded-3xl flex items-center justify-center shadow-2xl border border-white/30">
-            <Shield className="w-10 h-10 text-white" />
+          <div className="w-24 h-24 bg-white/10 backdrop-blur-3xl rounded-[2.5rem] flex items-center justify-center shadow-2xl border border-white/20 p-5">
+            <img src="/favicon.png" alt="Civix Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="text-6xl font-black tracking-tighter mb-4 leading-tight">Join the<br />Movement.</h1>

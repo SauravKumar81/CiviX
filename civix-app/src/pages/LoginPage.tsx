@@ -86,8 +86,8 @@ const LoginPage: React.FC = () => {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-12">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
-              <div className="w-6 h-5 bg-primary rounded-sm" />
+            <div className="w-10 h-10 transition-transform hover:scale-105">
+              <img src="/favicon.png" alt="Civix Logo" className="w-full h-full object-contain rounded-xl" />
             </div>
             <span className="text-2xl font-black text-white tracking-tight uppercase">Civix</span>
           </div>

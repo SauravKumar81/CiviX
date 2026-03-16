@@ -69,8 +69,8 @@ const LandingPage: React.FC = () => {
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
             <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate('/')}>
-              <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center transition-transform group-hover:scale-105">
-                <div className="w-4 h-3 bg-black rounded-[2px]" />
+              <div className="w-10 h-10 transition-transform group-hover:scale-105">
+                <img src="/favicon.png" alt="Civix Logo" className="w-full h-full object-contain rounded-xl" />
               </div>
               <span className="text-xl font-bold tracking-tight text-white">Civix</span>
             </div>
@@ -337,8 +337,8 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center border border-white/10">
-                <div className="w-3 h-2 bg-white rounded-[1px]" />
+              <div className="w-8 h-8">
+                <img src="/favicon.png" alt="Civix Logo" className="w-full h-full object-contain rounded-lg" />
               </div>
               <span className="text-xl font-bold tracking-tight text-white">Civix</span>
             </div>
