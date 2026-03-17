@@ -5,13 +5,14 @@ import {
   Menu, X, ChevronLeft, ChevronRight, Moon, Sun, MapPin
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { getReports, updateReport, createReport, addComment, shareReport, getTrendingTags } from '../services/reportService';
+import { getReports, upvoteReport, createReport, addComment, shareReport, getTrendingTags } from '../services/reportService';
 import type { Report } from '../services/reportService';
 import { useNavigate, useLocation } from 'react-router-dom';
 import TrendingTags from '../components/TrendingTags';
 import { useAuth } from '../context/AuthContext';
 import { toggleBookmark, getBookmarks } from '../services/authService';
 import FeedItem from '../components/FeedItem'; // Import FeedItem
+import { ProceduralGroundBackground } from '../components/ui/animated-pattern-cloud';
 
 const HomeFeed: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -170,9 +171,10 @@ const HomeFeed: React.FC = () => {
   });
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950 font-sans relative overflow-x-hidden transition-colors duration-300">
+    <div className="flex min-h-screen bg-transparent font-sans relative overflow-x-hidden transition-colors duration-300">
+      <ProceduralGroundBackground />
       {/* Mobile Top Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between px-4 z-50 transition-colors">
+      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-gray-950/60 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4 z-50 transition-colors">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <div className="w-5 h-4 bg-white rounded-sm" />
@@ -197,7 +199,7 @@ const HomeFeed: React.FC = () => {
 
       {/* Sidebar - Desktop & Mobile Drawer */}
       <aside className={`
-        fixed h-screen bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 z-40 transition-all duration-300 ease-in-out
+        fixed h-screen bg-white/70 dark:bg-gray-950/40 backdrop-blur-2xl border-r border-white/10 z-40 transition-all duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'}
         w-64 flex flex-col
@@ -336,18 +338,18 @@ const HomeFeed: React.FC = () => {
 
       {/* Main Content Area */}
       <main className={`
-        flex-1 flex justify-center bg-white dark:bg-gray-950 transition-all duration-300
+        flex-1 flex justify-center bg-transparent transition-all duration-300
         ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
         mt-16 lg:mt-0
       `}>
         <div className="flex w-full max-w-6xl">
           {/* Feed Section */}
-          <div className="flex-1 border-r border-gray-100 dark:border-gray-800 min-h-screen">
-            <header className="sticky top-16 lg:top-0 z-20 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex justify-between items-center">
+          <div className="flex-1 border-r border-white/10 min-h-screen">
+            <header className="sticky top-16 lg:top-0 z-20 bg-white/40 dark:bg-gray-950/20 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex justify-between items-center">
               <h2 className="text-xl font-extrabold text-gray-900 dark:text-white">Civic Feed</h2>
             </header>
 
-            <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
+            <div className="p-6 border-b border-white/10 bg-white/60 dark:bg-gray-950/30 backdrop-blur-lg">
               {isAuthenticated ? (
                 <div className="flex gap-4">
                   <img src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Guest'}`} className="w-12 h-12 rounded-full object-cover bg-white" alt="User" />
@@ -399,7 +401,7 @@ const HomeFeed: React.FC = () => {
               )}
             </div>
 
-            <div className="flex border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-hide bg-white dark:bg-gray-950">
+            <div className="flex border-b border-white/10 overflow-x-auto scrollbar-hide bg-white/60 dark:bg-gray-950/30 backdrop-blur-md">
               <Tab label="Local Reports" active={activeFilter === 'local'} onClick={() => { handleFilterChange('local'); setActiveTag(null); }} />
 
               <Tab label="Priority Hub" active={activeFilter === 'global'} onClick={() => { handleFilterChange('global'); setActiveTag(null); }} />
@@ -464,7 +466,7 @@ const HomeFeed: React.FC = () => {
                       try {
                         const reportToVote = reports.find(r => r._id === id);
                         if (reportToVote) {
-                          const updatedReport = await updateReport(id, { upvotes: (reportToVote.upvotes || 0) + 1 });
+                          const updatedReport = await upvoteReport(id);
                           setReports(reports.map(r => r._id === id ? updatedReport.data : r));
                         }
                       } catch (err) {
@@ -531,7 +533,7 @@ const HomeFeed: React.FC = () => {
               />
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6">
+            <div className="bg-white/40 dark:bg-gray-950/20 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
               <h3 className="text-base font-bold text-gray-900 dark:text-white mb-6 flex items-center justify-between">
                 Local Impact Stats
                 <TrendingUp className="w-4 h-4 text-green-500" />
@@ -554,7 +556,7 @@ const HomeFeed: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+            <div className="bg-white/40 dark:bg-gray-950/20 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden">
               <div className="p-5 border-b border-gray-50 dark:border-gray-800">
                 <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">Trending Tags</h3>
               </div>

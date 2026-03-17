@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, Users, Activity, Shield, Menu, X, ArrowRight, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { motion, useScroll, useTransform, type Variants } from 'framer-motion';
+import { TubesBackground } from '../components/ui/neon-flow';
 
 const LandingPage: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -43,22 +44,10 @@ const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-black text-white font-sans overflow-x-hidden selection:bg-violet-500/30">
       
-      {/* Grid Background */}
-      <div className="fixed inset-0 pointer-events-none z-0" 
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)
-          `,
-          backgroundSize: '4rem 4rem',
-          maskImage: 'radial-gradient(ellipse at center, black 40%, transparent 80%)',
-          WebkitMaskImage: 'radial-gradient(ellipse at top center, black 40%, transparent 100%)'
-        }}
-      />
-
-      {/* Hero Glows */}
-      <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-violet-600/20 rounded-full blur-[120px] pointer-events-none z-0"></div>
-      <div className="absolute top-[10%] right-[-10%] w-[500px] h-[500px] bg-fuchsia-600/10 rounded-full blur-[100px] pointer-events-none z-0"></div>
+      {/* Tubes Background wrapping the Hero */}
+      <TubesBackground className="absolute inset-0 z-0 h-[120vh]">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black pointer-events-none" />
+      </TubesBackground>
 
       {/* Header */}
       <motion.header 
@@ -129,7 +118,7 @@ const LandingPage: React.FC = () => {
       </motion.header>
 
       {/* Hero Section */}
-      <section className="relative pt-40 pb-20 lg:pt-56 lg:pb-32 z-10">
+      <section className="relative pt-40 pb-20 lg:pt-56 lg:pb-32 z-10 overflow-hidden">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 relative text-center flex flex-col items-center">
           
           <motion.div 

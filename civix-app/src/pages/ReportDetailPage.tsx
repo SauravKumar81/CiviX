@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { getReport, addComment, updateReport } from '../services/reportService';
+import { getReport, addComment, upvoteReport } from '../services/reportService';
 import { useAuth } from '../context/AuthContext';
 import FeedItem from '../components/FeedItem';
 
@@ -45,13 +45,12 @@ const ReportDetailPage = () => {
     }
     
     // Optimistic UI update
-    const isUpvoted = report.upvotedBy?.includes(user?.id); // Check logic if tracking votes
-    const newCount = (report.upvotes || 0) + (isUpvoted ? -1 : 1);
+    const newCount = (report.upvotes || 0) + 1;
     
     setReport({ ...report, upvotes: newCount });
 
     try {
-       await updateReport(reportId, { upvotes: newCount } as any);
+       await upvoteReport(reportId);
     } catch (err) {
        console.error(err);
        // Revert

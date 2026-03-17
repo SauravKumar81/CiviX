@@ -321,6 +321,30 @@ exports.shareReport = async (req, res, next) => {
   }
 };
 
+// @desc    Upvote report
+// @route   POST /api/reports/:id/upvote
+// @access  Private
+exports.upvoteReport = async (req, res, next) => {
+  try {
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Report not found' });
+    }
+
+    report.upvotes = (report.upvotes || 0) + 1;
+
+    await report.save();
+
+    res.status(200).json({
+      success: true,
+      data: report
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 // @desc    Get trending tags
 // @route   GET /api/reports/tags/trending
 // @access  Public

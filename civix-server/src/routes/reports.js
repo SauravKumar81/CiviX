@@ -7,6 +7,7 @@ const {
   deleteReport,
   addComment,
   shareReport,
+  upvoteReport,
   getTrendingTags
 } = require('../controllers/reports');
 
@@ -29,6 +30,7 @@ router
 
 router.route('/:id/comment').post(protect, addComment);
 router.route('/:id/share').post(protect, shareReport);
+router.route('/:id/upvote').post(protect, upvoteReport);
 router.get('/tags/trending', getTrendingTags);
 
 module.exports = router;

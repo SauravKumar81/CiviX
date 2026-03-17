@@ -71,6 +71,11 @@ export const shareReport = async (id: string) => {
   return response.data;
 };
 
+export const upvoteReport = async (id: string) => {
+  const response = await api.post(`/reports/${id}/upvote`);
+  return response.data;
+};
+
 export const getTrendingTags = async () => {
   const response = await api.get('/reports/tags/trending');
   return response.data;

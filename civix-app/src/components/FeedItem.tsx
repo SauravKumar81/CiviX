@@ -138,7 +138,7 @@ const FeedItem = ({
   return (
     <div 
       onClick={onClick}
-      className="mb-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg hover:border-gray-300 dark:hover:border-gray-700 transition-all cursor-pointer group overflow-hidden"
+      className="mb-4 bg-white/40 dark:bg-gray-950/20 backdrop-blur-xl border border-white/10 rounded-lg hover:border-white/20 transition-all cursor-pointer group overflow-hidden shadow-sm"
     >
       <div className="p-3 md:p-4">
         {/* Header */}
@@ -231,17 +231,17 @@ const FeedItem = ({
         {/* Footer Actions */}
         <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-gray-400">
           {/* Vote Pill */}
-          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+          <div className="flex items-center bg-gray-100/50 dark:bg-gray-800/40 backdrop-blur-sm rounded-full overflow-hidden">
              <button 
                onClick={(e) => { e.stopPropagation(); onVote(id); }}
-               className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-orange-500 transition-colors"
+               className="p-2 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 hover:text-orange-500 transition-colors"
              >
                <ArrowBigUp className={`w-5 h-5 ${false ? 'text-orange-500 fill-orange-500' : ''}`} />
              </button>
              <span className="px-1 text-sm text-gray-900 dark:text-gray-200">{engagement.likes && engagement.likes !== '0' ? engagement.likes : 'Vote'}</span>
              <button 
                onClick={(e) => { e.stopPropagation(); }}
-               className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-violet-500 transition-colors"
+               className="p-2 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 hover:text-violet-500 transition-colors"
              >
                <ArrowBigDown className="w-5 h-5" />
              </button>
@@ -250,7 +250,7 @@ const FeedItem = ({
           {/* Comment Pill */}
           <button 
              onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
-             className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+             className="flex items-center gap-2 bg-gray-100/50 dark:bg-gray-800/40 backdrop-blur-sm px-3 py-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors"
           >
              <MessageSquare className="w-4 h-4" />
              <span>{comments ? comments.length : engagement.comments}</span>
@@ -259,7 +259,7 @@ const FeedItem = ({
           {/* Share Pill */}
           <button 
              onClick={(e) => { e.stopPropagation(); onShare(id); }}
-             className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+             className="flex items-center gap-2 bg-gray-100/50 dark:bg-gray-800/40 backdrop-blur-sm px-3 py-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors"
           >
              <Share className="w-4 h-4" />
              <span>Share</span>
