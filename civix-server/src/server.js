@@ -22,9 +22,13 @@ app.use(express.json());
 
 // Enable CORS
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: [
+    'http://localhost:5173',
+    'https://civi-x.vercel.app',
+    'https://civi-p1vszfsxy-sauravs-projects-ce59e099.vercel.app',
+    'https://civix-w7p1.onrender.com'
+  ],
   credentials: true,
-
 }));
 
 // Logging
