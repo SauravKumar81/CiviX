@@ -26,8 +26,9 @@ app.use(cors({
     'http://localhost:5173',
     'https://civi-x.vercel.app',
     'https://civi-p1vszfsxy-sauravs-projects-ce59e099.vercel.app',
-    'https://civix-w7p1.onrender.com'
-  ],
+    'https://civix-w7p1.onrender.com',
+    process.env.CLIENT_URL // This is where it's used!
+  ].filter(Boolean), // This removes undefined/null values
   credentials: true,
 }));
 
