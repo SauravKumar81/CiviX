@@ -85,7 +85,6 @@ exports.getMe = async (req, res, next) => {
 };
 
 const { OAuth2Client } = require('google-auth-library');
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // @desc    Google Authentication
 // @route   POST /api/auth/google
@@ -99,15 +98,21 @@ exports.googleAuth = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Google ID token required' });
     }
 
-    if (!process.env.GOOGLE_CLIENT_ID) {
-      console.error('SERVER CONFIG ERROR: GOOGLE_CLIENT_ID is not set in .env');
+    const GOOGLE_ID = process.env.GOOGLE_CLIENT_ID;
+
+    if (!GOOGLE_ID) {
+      console.error('SERVER CONFIG ERROR: GOOGLE_CLIENT_ID is not set in environment variables');
       return res.status(500).json({ success: false, error: 'Server configuration error' });
     }
 
-    console.log('Verifying Google Token...');
+    // Initialize client inside or ensure it's updated
+    const client = new OAuth2Client(GOOGLE_ID);
+
+    console.log('Verifying Google Token against audience:', GOOGLE_ID.substring(0, 15) + '...');
+    
     const ticket = await client.verifyIdToken({
       idToken,
-      audience: process.env.GOOGLE_CLIENT_ID
+      audience: GOOGLE_ID
     });
 
     const payload = ticket.getPayload();
