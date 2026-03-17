@@ -64,6 +64,10 @@ const reportSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  upvotedBy: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  }],
   shares: {
     type: Number,
     default: 0

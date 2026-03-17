@@ -332,13 +332,25 @@ exports.upvoteReport = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Report not found' });
     }
 
-    report.upvotes = (report.upvotes || 0) + 1;
+    const userId = req.user._id;
+    const upvoteIndex = report.upvotedBy.indexOf(userId);
+
+    if (upvoteIndex > -1) {
+      // User has already upvoted, remove it (toggle)
+      report.upvotedBy.splice(upvoteIndex, 1);
+      report.upvotes = Math.max(0, (report.upvotes || 0) - 1);
+    } else {
+      // User hasn't upvoted yet, add it
+      report.upvotedBy.push(userId);
+      report.upvotes = (report.upvotes || 0) + 1;
+    }
 
     await report.save();
 
     res.status(200).json({
       success: true,
-      data: report
+      data: report,
+      hasUpvoted: upvoteIndex === -1 // True means they just added it
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

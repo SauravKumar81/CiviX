@@ -23,6 +23,7 @@ export interface Report {
     rank?: string;
   };
   upvotes?: number;
+  upvotedBy?: string[];
   isVerified?: boolean;
   createdAt?: string;
   comments?: {

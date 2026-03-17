@@ -11,6 +11,7 @@ import Map, { NavigationControl, Source, Layer } from 'react-map-gl/mapbox';
 
 
 import { ReportMarker, MapTool, SideIcon, FilterTab } from '../components/MapComponents';
+import { ProceduralGroundBackground } from '../components/ui/animated-pattern-cloud';
 
 // mapboxgl.workerClass = require('worker-loader!mapbox-gl/dist/mapbox-gl-csp-worker').default;
 
@@ -21,7 +22,7 @@ const TrendingMapPage: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [userCity, setUserCity] = useState<string>("Locating...");
-  const [mapLayer, setMapLayer] = useState<'standard' | 'satellite' | 'dark'>('standard');
+  const [mapLayer, setMapLayer] = useState<'standard' | 'satellite' | 'dark'>('dark');
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'trending' | 'neighborhoods' | 'official'>('trending');
@@ -109,9 +110,10 @@ const TrendingMapPage: React.FC = () => {
   }, [mapLayer]);
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-950 font-sans overflow-hidden transition-colors duration-300">
+    <div className="flex h-screen bg-transparent font-sans overflow-hidden transition-colors duration-300">
+      <ProceduralGroundBackground />
       {/* Sidebar for navigation consistency */}
-      <aside className="hidden lg:flex flex-col w-20 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 items-center py-8 z-50">
+      <aside className="hidden lg:flex flex-col w-20 bg-white/70 dark:bg-gray-950/40 backdrop-blur-2xl border-r border-white/10 items-center py-8 z-50">
         <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mb-12 shadow-lg shadow-primary/20 cursor-pointer hover:scale-110 transition-transform" onClick={() => navigate('/feed')}>
           <div className="w-6 h-5 bg-white rounded-sm" />
         </div>
@@ -125,7 +127,7 @@ const TrendingMapPage: React.FC = () => {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative">
         {/* Dynamic Header */}
-        <header className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex flex-col gap-4 z-30 transition-colors">
+        <header className="flex-shrink-0 bg-white/40 dark:bg-gray-950/20 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex flex-col gap-4 z-30 transition-colors">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link to="/feed" className="p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 transition-colors">
@@ -176,12 +178,12 @@ const TrendingMapPage: React.FC = () => {
         {/* Map Infrastructure */}
         <div className="flex-1 relative bg-gray-100 dark:bg-gray-900 overflow-hidden">
           {activeTab === 'LIST' ? (
-            <div className="h-full overflow-y-auto p-8 bg-slate-50 dark:bg-gray-950 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:16px_16px]">
+            <div className="h-full overflow-y-auto p-8 bg-transparent relative">
               {/* Note: I'm keeping the LIST view content essentially the same, assuming it doesn't need Mapbox changes except maybe mini-maps, but based on reading it seems purely list/UI based */}
               <div className="max-w-5xl mx-auto relative min-h-[800px]">
                 {/* Central Node */}
                 <div className="absolute left-1/2 top-10 -translate-x-1/2 z-20">
-                   <div className="bg-primary text-white p-6 rounded-3xl shadow-2xl shadow-primary/30 flex flex-col items-center justify-center w-48 h-48 border-4 border-white dark:border-gray-800 animate-in zoom-in duration-500">
+                   <div className="bg-primary/90 backdrop-blur-xl text-white p-6 rounded-3xl shadow-2xl shadow-primary/30 flex flex-col items-center justify-center w-48 h-48 border-4 border-white/20 animate-in zoom-in duration-500">
                       <Compass size={40} className="mb-2 animate-pulse" />
                       <h2 className="text-xl font-black uppercase tracking-widest text-center">Civic<br/>Explorer</h2>
                    </div>
@@ -192,7 +194,7 @@ const TrendingMapPage: React.FC = () => {
 
                 {/* Branch 1: Local (Left) */}
                 <div className="absolute left-0 top-80 w-[30%]">
-                   <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-emerald-500 shadow-xl mb-6 relative z-10">
+                   <div className="bg-white/60 dark:bg-gray-950/40 backdrop-blur-xl p-4 rounded-2xl border-2 border-emerald-500 shadow-xl mb-6 relative z-10">
                       <div className="absolute -top-3 -right-3 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white"><MapIcon size={16} /></div>
                       <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-wider">{userCity}</h3>
                       <p className="text-xs text-gray-400 font-bold uppercase">Your Vicinity</p>
@@ -202,7 +204,7 @@ const TrendingMapPage: React.FC = () => {
                         ? reports.filter(r => r.location?.formattedAddress?.includes(userCity) || r.location?.city === userCity).slice(0, 3) 
                         : reports.slice(0, 3) 
                       ).map(r => (
-                        <div key={r._id} onClick={() => setSelectedReport(r)} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:scale-105 transition-transform cursor-pointer">
+                        <div key={r._id} onClick={() => setSelectedReport(r)} className="bg-white/40 dark:bg-gray-950/20 backdrop-blur-xl p-4 rounded-xl border border-white/10 shadow-sm hover:scale-105 transition-transform cursor-pointer">
                            <h4 className="font-bold text-gray-900 dark:text-white text-sm line-clamp-1">{r.title}</h4>
                            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1"><MapIcon size={8}/> {r.location?.formattedAddress || 'Nearby'}</p>
                         </div>
@@ -212,14 +214,14 @@ const TrendingMapPage: React.FC = () => {
 
                 {/* Branch 2: Trending (Center Bottom) */}
                 <div className="absolute left-1/2 -translate-x-1/2 top-[450px] w-[30%]">
-                   <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-orange-500 shadow-xl mb-6 relative z-10 mx-auto">
+                   <div className="bg-white/60 dark:bg-gray-950/40 backdrop-blur-xl p-4 rounded-2xl border-2 border-orange-500 shadow-xl mb-6 relative z-10 mx-auto">
                       <div className="absolute -top-3 -right-3 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white"><TrendingUp size={16} /></div>
                       <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-wider text-center">Trending</h3>
                       <p className="text-xs text-gray-400 font-bold uppercase text-center">Global Hotspots</p>
                    </div>
                    <div className="grid grid-cols-1 gap-3">
                       {[...reports].sort((a,b) => (b.upvotes || 0) - (a.upvotes || 0)).slice(0, 3).map(r => (
-                        <div key={r._id} onClick={() => setSelectedReport(r)} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:scale-105 transition-transform cursor-pointer">
+                        <div key={r._id} onClick={() => setSelectedReport(r)} className="bg-white/40 dark:bg-gray-950/20 backdrop-blur-xl p-4 rounded-xl border border-white/10 shadow-sm hover:scale-105 transition-transform cursor-pointer flex flex-col items-center">
                            <div className="flex items-center gap-2 mb-2">
                               <span className="text-[10px] font-black bg-orange-100 text-orange-600 px-2 py-0.5 rounded uppercase">Viral</span>
                               <span className="text-[10px] text-gray-400">{(r.upvotes || 0) * 12 + 450} views</span>
@@ -232,17 +234,17 @@ const TrendingMapPage: React.FC = () => {
 
                 {/* Branch 3: Official (Right) */}
                 <div className="absolute right-0 top-80 w-[30%]">
-                   <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-violet-500 shadow-xl mb-6 relative z-10 ml-auto">
+                   <div className="bg-white/60 dark:bg-gray-950/40 backdrop-blur-xl p-4 rounded-2xl border-2 border-violet-500 shadow-xl mb-6 relative z-10 ml-auto">
                       <div className="absolute -top-3 -left-3 w-8 h-8 bg-violet-500 rounded-full flex items-center justify-center text-white"><Shield size={16} /></div>
                       <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-wider text-right">Official</h3>
                       <p className="text-xs text-gray-400 font-bold uppercase text-right">City Updates</p>
                    </div>
                    <div className="space-y-3 pr-4 border-r-2 border-violet-200 dark:border-violet-900/30 text-right">
-                      <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-100 dark:border-violet-800 shadow-sm">
+                      <div className="bg-violet-500/10 dark:bg-violet-500/5 backdrop-blur-md p-4 rounded-xl border border-violet-500/20 shadow-sm">
                            <h4 className="font-bold text-violet-900 dark:text-violet-100 text-sm">Main St. Closure</h4>
                            <p className="text-[10px] text-violet-600 dark:text-violet-300 mt-1">Scheduled Maintenance • 2 days</p>
                       </div>
-                      <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-100 dark:border-violet-800 shadow-sm">
+                      <div className="bg-violet-500/10 dark:bg-violet-500/5 backdrop-blur-md p-4 rounded-xl border border-violet-500/20 shadow-sm">
                            <h4 className="font-bold text-violet-900 dark:text-violet-100 text-sm">Town Hall Q&A</h4>
                            <p className="text-[10px] text-violet-600 dark:text-violet-300 mt-1">Friday 6 PM • City Center</p>
                       </div>
@@ -346,9 +348,8 @@ const TrendingMapPage: React.FC = () => {
             <MapTool icon={<Info />} label="Legend" />
           </div>
 
-          {/* Floating Search Hub (Desktop/Bottom Left) */}
           <div className="absolute bottom-6 left-6 z-[400] flex gap-2 pointer-events-none">
-             <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-2 rounded-2xl border border-white/50 dark:border-gray-800/50 shadow-2xl flex gap-2 pointer-events-auto">
+             <div className="bg-white/40 dark:bg-gray-950/20 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-2xl flex gap-2 pointer-events-auto">
                <div onClick={() => setActiveFilter('trending')}>
                  <FilterTab icon={<TrendingUp size={12} />} label="Trending" active={activeFilter === 'trending'} />
                </div>
@@ -364,7 +365,7 @@ const TrendingMapPage: React.FC = () => {
           {/* Selected Issue Preview */}
           {selectedReport && (
             <div className="absolute bottom-6 left-6 right-6 sm:left-auto sm:right-6 sm:w-[420px] z-[500]">
-              <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl p-6 rounded-[32px] border border-white/50 dark:border-gray-800/50 shadow-2xl space-y-4 animate-in slide-in-from-bottom-5 duration-500">
+              <div className="bg-white/40 dark:bg-gray-950/20 backdrop-blur-2xl p-6 rounded-[32px] border border-white/10 shadow-2xl space-y-4 animate-in slide-in-from-bottom-5 duration-500">
                 <div className="flex justify-between items-start">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">

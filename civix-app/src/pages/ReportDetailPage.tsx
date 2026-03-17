@@ -44,17 +44,13 @@ const ReportDetailPage = () => {
       return navigate('/login');
     }
     
-    // Optimistic UI update
-    const newCount = (report.upvotes || 0) + 1;
-    
-    setReport({ ...report, upvotes: newCount });
-
     try {
-       await upvoteReport(reportId);
+       const res = await upvoteReport(reportId);
+       if (res.success) {
+         setReport(res.data);
+       }
     } catch (err) {
        console.error(err);
-       // Revert
-       setReport({ ...report, upvotes: (report.upvotes || 0) });
     }
   };
 
@@ -148,6 +144,7 @@ const ReportDetailPage = () => {
                 createdAt: c.createdAt
             }))}
             isBookmarked={false} 
+            isUpvoted={report.upvotedBy?.includes(user?.id || '')}
             currentUserId={user?.id}
             onVote={handleVote}
             onComment={handleComment}

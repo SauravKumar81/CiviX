@@ -458,6 +458,8 @@ const HomeFeed: React.FC = () => {
                     tags={report.tags}
                     title={report.title}
                     comments={report.comments}
+                    isUpvoted={report.upvotedBy?.includes(user?.id || '')}
+                    isBookmarked={bookmarkedIds.includes(report._id || '')}
                     currentUserId={user?.id}
                     onClick={() => navigate(`/report/${report._id}`)} // Navigate on click
                     onEdit={(id) => navigate(`/edit-report/${id}`)}
@@ -486,19 +488,16 @@ const HomeFeed: React.FC = () => {
                       try {
                         const updatedReport = await shareReport(id);
                         setReports(reports.map(r => r._id === id ? updatedReport.data : r));
-                        // Show simple feedback
-                        alert("Report shared!"); 
                       } catch (err) {
                         console.error('Failed to share:', err);
                       }
                     }}
-                    isBookmarked={bookmarkedIds.includes(report._id!)}
                     onBookmark={async (id) => {
                       if (!isAuthenticated) return navigate('/login');
                       try {
-                        const updatedBookmarks = await toggleBookmark(id);
-                        // Backend returns updated user bookmarks array, but IDs might be just strings
-                        setBookmarkedIds(updatedBookmarks.data.map((b: any) => typeof b === 'string' ? b : b._id));
+                        const res = await toggleBookmark(id);
+                        const updatedIds = res.data.map((b: any) => typeof b === 'string' ? b : b._id);
+                        setBookmarkedIds(updatedIds);
                       } catch (err) {
                         console.error('Failed to bookmark:', err);
                       }
