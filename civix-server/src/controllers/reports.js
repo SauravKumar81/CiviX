@@ -58,6 +58,11 @@ exports.getReports = async (req, res, next) => {
     }
 
 
+    // Tag Filter (Fix #2: server-side tag filtering)
+    if (req.query.tag) {
+      query.tags = req.query.tag.toLowerCase();
+    }
+
     // Text Search
     if (req.query.q) {
       const regex = new RegExp(req.query.q, 'i');
@@ -137,10 +142,7 @@ exports.getReport = async (req, res, next) => {
 // @access  Private
 exports.createReport = async (req, res, next) => {
   try {
-    console.log('--- CREATE REPORT DEBUG ---');
-    console.log('Body:', req.body);
-    console.log('User:', req.user ? req.user._id : 'NO USER');
-    console.log('File:', req.file ? req.file.path : 'NO FILE');
+
 
     const reportData = { ...req.body };
 
@@ -158,7 +160,6 @@ exports.createReport = async (req, res, next) => {
     // If location is sent as stringified JSON (common with FormData), parse it
     if (typeof reportData.location === 'string') {
       try {
-        console.log('Parsing location string...');
         reportData.location = JSON.parse(reportData.location);
       } catch (e) {
         console.error('Location parsing error:', e);
@@ -173,7 +174,7 @@ exports.createReport = async (req, res, next) => {
 
 
 
-    console.log('Final Report Data:', reportData);
+
 
     const report = await Report.create(reportData);
 

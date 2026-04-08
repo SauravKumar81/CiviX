@@ -7,7 +7,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { getReports } from '../services/reportService';
 import type { Report } from '../services/reportService';
-import Map, { NavigationControl, Source, Layer } from 'react-map-gl/mapbox';
+import Map, { NavigationControl, Source, Layer, type MapRef } from 'react-map-gl/mapbox';
 
 
 import { ReportMarker, MapTool, SideIcon, FilterTab } from '../components/MapComponents';
@@ -34,16 +34,15 @@ const TrendingMapPage: React.FC = () => {
     bearing: 20
   });
   
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<MapRef>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchReports = async () => {
       setLoading(true);
-      console.log("Mapbox Token present:", !!import.meta.env.VITE_MAPBOX_TOKEN);
-      console.log("Mapbox Token value (truncated):", import.meta.env.VITE_MAPBOX_TOKEN?.substring(0, 10));
+
       try {
-        let params: any = { q: searchQuery };
+        let params: Record<string, string | number> = { q: searchQuery };
         
         if (activeFilter === 'trending') {
           params.sort = 'trending';

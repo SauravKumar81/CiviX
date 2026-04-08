@@ -29,7 +29,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (checkAuth()) {
       try {
         const userData = await getMe();
-        setUser(userData.data);
+        const raw = userData.data;
+        setUser({
+          id: raw._id || raw.id,
+          name: raw.name,
+          username: raw.username,
+          email: raw.email,
+          role: raw.role,
+          avatar: raw.avatar,
+        });
       } catch (err) {
         console.error('Failed to fetch user', err);
         logoutService();

@@ -37,7 +37,7 @@ export interface Report {
   tags?: string[];
 }
 
-export const getReports = async (filters?: { city?: string; state?: string; user?: string; lat?: number; lng?: number; q?: string; sort?: string }) => {
+export const getReports = async (filters?: { city?: string; state?: string; user?: string; lat?: number; lng?: number; q?: string; sort?: string; tag?: string }) => {
   const response = await api.get('/reports', { params: filters });
   return response.data;
 };

@@ -5,13 +5,14 @@ import {
   Menu, X, ChevronLeft, ChevronRight, Moon, Sun, MapPin
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { getReports, upvoteReport, createReport, addComment, shareReport, getTrendingTags } from '../services/reportService';
+import { getReports, upvoteReport, createReport, addComment, shareReport, getTrendingTags, deleteReport, updateReport } from '../services/reportService';
 import type { Report } from '../services/reportService';
 import { useNavigate, useLocation } from 'react-router-dom';
 import TrendingTags from '../components/TrendingTags';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { toggleBookmark, getBookmarks } from '../services/authService';
-import FeedItem from '../components/FeedItem'; // Import FeedItem
+import FeedItem from '../components/FeedItem';
 import { ProceduralGroundBackground } from '../components/ui/animated-pattern-cloud';
 
 const HomeFeed: React.FC = () => {
@@ -23,6 +24,7 @@ const HomeFeed: React.FC = () => {
   const [isPosting, setIsPosting] = useState(false);
   const { isAuthenticated, loading: authLoading, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -36,53 +38,46 @@ const HomeFeed: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated) {
       getBookmarks().then(bookmarks => {
-        setBookmarkedIds(bookmarks.map((b: any) => typeof b === 'string' ? b : b._id));
-      }).catch(console.error);
+        setBookmarkedIds(bookmarks.map((b: Record<string, string>) => typeof b === 'string' ? b : b._id));
+      }).catch(() => {
+        // Silently fail for bookmarks fetch
+      });
     }
   }, [isAuthenticated]);
 
   useEffect(() => {
     getTrendingTags().then(res => {
         if(res.success) setTrendingTags(res.data);
-    }).catch(console.error);
+    }).catch(() => {
+        // Silently fail for trending tags
+    });
   }, []);
 
   const fetchReports = async (filterOverride?: 'local' | 'global' | 'mine') => {
     setLoading(true);
     try {
       const filter = filterOverride || activeFilter;
-      let filters: any = {};
+      const filters: Record<string, string | number> = {};
       
       if (filter === 'local' && userLocation && userLocation.latitude && userLocation.longitude) {
-        filters = { 
-          lat: userLocation.latitude, 
-          lng: userLocation.longitude 
-        };
+        filters.lat = userLocation.latitude;
+        filters.lng = userLocation.longitude;
       } else if (filter === 'local' && userLocation?.city) {
-         // Fallback to City string if no coords
-         filters = { city: userLocation.city, state: userLocation.state };
+         filters.city = userLocation.city;
+         if (userLocation.state) filters.state = userLocation.state;
       } else if (filter === 'mine' && user?.id) {
-        filters = { user: user.id };
+        filters.user = user.id;
       }
       
+      // Fix #2: Pass tag to backend instead of client-side filtering
       if (activeTag) {
-          // Client-side filter for now since backend sort logic is strict and I don't want to break it
-          // OR better: pass tag to clean query.
-          // Let's rely on client-side filtering for immediate feedback if the backend doesn't support 'tag' param yet.
-          // Wait, I updated 'createReport' to extract tags, but 'getReports' doesn't filter by tag explicitly in my previous view.
-          // I'll add client-side filtering here for robustness.
+        filters.tag = activeTag;
       }
       
       const data = await getReports(filters);
-      let fetchedReports = data.data;
-
-      if (activeTag) {
-        fetchedReports = fetchedReports.filter((r: Report) => r.tags && r.tags.includes(activeTag));
-      }
-
-      setReports(fetchedReports);
-    } catch (error) {
-      console.error('Error fetching reports:', error);
+      setReports(data.data);
+    } catch {
+      toast.error('Failed to load reports. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -96,17 +91,15 @@ const HomeFeed: React.FC = () => {
         const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json`);
         const data = await response.json();
         const address = data.address;
-        const location = {
+        const loc = {
           city: address.city || address.town || address.village,
           state: address.state,
           latitude: position.coords.latitude,
           longitude: position.coords.longitude
         };
-        setUserLocation(location);
-        // We don't automatically trigger fetch here to avoid double loading on mount,
-        // but if the user switches to 'local' later, it will work.
-      } catch (err) {
-        console.error('Reverse geocoding failed:', err);
+        setUserLocation(loc);
+      } catch {
+        // Geolocation reverse failed, use defaults
       }
     });
   };
@@ -139,14 +132,19 @@ const HomeFeed: React.FC = () => {
         status: 'pending',
         location: {
           type: 'Point',
-          coordinates: [77.2090, 28.6139], // Default New Delhi
-          formattedAddress: 'New Delhi, India'
+          coordinates: userLocation?.longitude && userLocation?.latitude
+            ? [userLocation.longitude, userLocation.latitude]
+            : [77.2090, 28.6139],
+          formattedAddress: userLocation?.city 
+            ? `${userLocation.city}${userLocation.state ? ', ' + userLocation.state : ''}`
+            : 'New Delhi, India'
         }
       });
       setPostContent('');
+      toast.success('Report posted successfully!');
       fetchReports();
-    } catch (error) {
-      console.error('Quick post failed:', error);
+    } catch {
+      toast.error('Failed to post. Please try again.');
     } finally {
       setIsPosting(false);
     }
@@ -204,7 +202,7 @@ const HomeFeed: React.FC = () => {
         ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'}
         w-64 flex flex-col
       `}>
-        {/* Desktop Toggle Button (Floating on edge) */}
+        {/* Desktop Toggle Button */}
         <button 
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           className="hidden lg:flex absolute -right-3 top-20 w-6 h-6 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-full items-center justify-center shadow-md text-gray-400 hover:text-primary hover:scale-110 transition-all z-50"
@@ -292,7 +290,7 @@ const HomeFeed: React.FC = () => {
 
           {/* Bottom Section */}
         <div className="px-4 mt-auto pt-4 space-y-2">
-            {/* Theme Toggle Button (Desktop Sidebar) */}
+            {/* Theme Toggle */}
             <button 
               onClick={toggleTheme}
               className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white ${isSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}
@@ -403,7 +401,6 @@ const HomeFeed: React.FC = () => {
 
             <div className="flex border-b border-white/10 overflow-x-auto scrollbar-hide bg-white/60 dark:bg-gray-950/30 backdrop-blur-md">
               <Tab label="Local Reports" active={activeFilter === 'local'} onClick={() => { handleFilterChange('local'); setActiveTag(null); }} />
-
               <Tab label="Priority Hub" active={activeFilter === 'global'} onClick={() => { handleFilterChange('global'); setActiveTag(null); }} />
             </div>
 
@@ -413,20 +410,11 @@ const HomeFeed: React.FC = () => {
                   onTagClick={(tag) => {
                     if (activeTag === tag) {
                       setActiveTag(null);
-                      fetchReports(activeFilter);
                     } else {
                       setActiveTag(tag);
-                      // Trigger refetch or just re-render is handled by effect?
-                      // The fetchReports depends on state? No, I call it manually.
-                      // I need to trigger fetch or filter.
-                      // Best way: Update state, then effect triggers fetch?
-                      // No, fetchReports is manual.
-                      // I'll just call fetchReports() inside a useEffect listening to activeTag?
-                      // Or just call it here.
-                      // But state update is async.
                     }
                   }} 
-               />
+                />
             </div>
 
             <div className="bg-gray-50/30 dark:bg-gray-900/10">
@@ -461,18 +449,35 @@ const HomeFeed: React.FC = () => {
                     isUpvoted={report.upvotedBy?.includes(user?.id || '')}
                     isBookmarked={bookmarkedIds.includes(report._id || '')}
                     currentUserId={user?.id}
-                    onClick={() => navigate(`/report/${report._id}`)} // Navigate on click
+                    onClick={() => navigate(`/report/${report._id}`)}
                     onEdit={(id) => navigate(`/edit-report/${id}`)}
+                    onDelete={async (id) => {
+                      if (!isAuthenticated) return navigate('/login');
+                      try {
+                        await deleteReport(id);
+                        setReports(reports.filter(r => r._id !== id));
+                        toast.success('Report deleted successfully.');
+                      } catch {
+                        toast.error('Failed to delete report.');
+                      }
+                    }}
+                    onStatusChange={async (id, newStatus) => {
+                      if (!isAuthenticated) return navigate('/login');
+                      try {
+                        const updated = await updateReport(id, { status: newStatus as 'pending' | 'in-progress' | 'resolved' });
+                        setReports(reports.map(r => r._id === id ? updated.data : r));
+                        toast.success(`Status updated to "${newStatus}".`);
+                      } catch {
+                        toast.error('Failed to update status.');
+                      }
+                    }}
                     onVote={async (id) => {
                       if (!isAuthenticated) return navigate('/login');
                       try {
-                        const reportToVote = reports.find(r => r._id === id);
-                        if (reportToVote) {
-                          const updatedReport = await upvoteReport(id);
-                          setReports(reports.map(r => r._id === id ? updatedReport.data : r));
-                        }
-                      } catch (err) {
-                        console.error('Failed to vote:', err);
+                        const updatedReport = await upvoteReport(id);
+                        setReports(reports.map(r => r._id === id ? updatedReport.data : r));
+                      } catch {
+                        toast.error('Failed to vote. Please try again.');
                       }
                     }}
                     onComment={async (id, text) => {
@@ -480,26 +485,29 @@ const HomeFeed: React.FC = () => {
                       try {
                         const updatedReport = await addComment(id, text);
                         setReports(reports.map(r => r._id === id ? updatedReport.data : r));
-                      } catch (err) {
-                        console.error('Failed to comment:', err);
+                        toast.success('Comment added!');
+                      } catch {
+                        toast.error('Failed to add comment.');
                       }
                     }}
                     onShare={async (id) => {
                       try {
                         const updatedReport = await shareReport(id);
                         setReports(reports.map(r => r._id === id ? updatedReport.data : r));
-                      } catch (err) {
-                        console.error('Failed to share:', err);
+                        toast.info('Report shared!');
+                      } catch {
+                        toast.error('Failed to share report.');
                       }
                     }}
                     onBookmark={async (id) => {
                       if (!isAuthenticated) return navigate('/login');
                       try {
                         const res = await toggleBookmark(id);
-                        const updatedIds = res.data.map((b: any) => typeof b === 'string' ? b : b._id);
+                        const updatedIds = res.data.map((b: Record<string, string>) => typeof b === 'string' ? b : b._id);
                         setBookmarkedIds(updatedIds);
-                      } catch (err) {
-                        console.error('Failed to bookmark:', err);
+                        toast.success(updatedIds.includes(id) ? 'Bookmarked!' : 'Bookmark removed.');
+                      } catch {
+                        toast.error('Failed to update bookmark.');
                       }
                     }}
                     onTagClick={(tag) => setActiveTag(tag)}
@@ -609,9 +617,6 @@ const Tab = ({ label, active = false, onClick }: { label: string, active?: boole
   </button>
 );
 
-// Removed FeedItem local function component 
-// Removed helpers getCityColor, calculateDistance, and LocationBadge as they are in components/FeedItem.tsx
-
 const TrendingItem = ({ category, tag, reports, onClick }: { category: string, tag: string, reports: string, onClick?: () => void }) => (
   <button onClick={onClick} className="w-full text-left p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors space-y-0.5">
     <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400">{category}</p>
@@ -625,8 +630,6 @@ const CheckCircle2 = ({ className }: { className?: string }) => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
   </svg>
 );
-
-// Removed getCityColor, calculateDistance, LocationBadge. They are now in components/FeedItem.tsx
 
 export const timeAgo = (dateInput?: string | Date): string => {
   if (!dateInput) return 'Just now';

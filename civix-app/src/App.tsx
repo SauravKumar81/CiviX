@@ -16,6 +16,7 @@ import AccountPage from './pages/AccountPage';
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -41,68 +42,70 @@ function App() {
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID'}>
       <AuthProvider>
-        <ThemeProvider>
-          <Router>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route 
-                path="/profile-setup" 
-                element={
-                  <ProtectedRoute>
-                    <ProfileSetupPage />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route path="/" element={<LandingPage />} />
-              <Route 
-                path="/feed" 
-                element={
-                  <ProtectedRoute>
-                    <HomeFeed />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/report" 
-                element={
-                  <ProtectedRoute>
-                    <ReportIssuePage />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route path="/report/:id" element={<ReportDetailPage />} />
-              <Route path="/map" element={<TrendingMapPage />} />
-              <Route 
-                path="/edit-report/:id" 
-                element={
-                  <ProtectedRoute>
-                    <EditReportPage />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/profile/:id?" 
-                element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/account" 
-                element={
-                  <ProtectedRoute>
-                    <AccountPage />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route path="/logout" element={<LogoutConfirmationPage />} />
-              {/* Fallback */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Router>
-        </ThemeProvider>
+        <ToastProvider>
+          <ThemeProvider>
+            <Router>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route 
+                  path="/profile-setup" 
+                  element={
+                    <ProtectedRoute>
+                      <ProfileSetupPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route path="/" element={<LandingPage />} />
+                <Route 
+                  path="/feed" 
+                  element={
+                    <ProtectedRoute>
+                      <HomeFeed />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/report" 
+                  element={
+                    <ProtectedRoute>
+                      <ReportIssuePage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route path="/report/:id" element={<ReportDetailPage />} />
+                <Route path="/map" element={<TrendingMapPage />} />
+                <Route 
+                  path="/edit-report/:id" 
+                  element={
+                    <ProtectedRoute>
+                      <EditReportPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/profile/:id?" 
+                  element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/account" 
+                  element={
+                    <ProtectedRoute>
+                      <AccountPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route path="/logout" element={<LogoutConfirmationPage />} />
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Router>
+          </ThemeProvider>
+        </ToastProvider>
       </AuthProvider>
     </GoogleOAuthProvider>
   );

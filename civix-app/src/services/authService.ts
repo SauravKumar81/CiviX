@@ -57,7 +57,15 @@ export const getPublicProfile = async (id: string) => {
   const response = await api.get(`/users/${id}`);
   return response.data;
 };
-export const updateProfile = (data: any) => {
+export interface UpdateProfileData {
+  name?: string;
+  username?: string;
+  bio?: string;
+  city?: string;
+  avatar?: string;
+}
+
+export const updateProfile = (data: UpdateProfileData | FormData) => {
   const isFormData = data instanceof FormData;
   return api.put('/users/profile', data, {
     headers: {
@@ -66,5 +74,5 @@ export const updateProfile = (data: any) => {
   });
 };
 
-export const updatePassword = async (data: any) => api.put('/auth/updatepassword', data);
+export const updatePassword = async (data: { currentPassword: string; newPassword: string }) => api.put('/auth/updatepassword', data);
 export const deleteAccount = async () => api.delete('/auth/deleteaccount');

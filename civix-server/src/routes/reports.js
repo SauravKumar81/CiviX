@@ -25,7 +25,6 @@ router
   .route('/:id')
   .get(getReport)
   .put(protect, upload.single('image'), updateReport)
-  .put(protect, upload.single('image'), updateReport)
   .delete(protect, deleteReport);
 
 router.route('/:id/comment').post(protect, addComment);
