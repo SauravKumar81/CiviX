@@ -99,7 +99,7 @@ const ReportDetailPage = () => {
       <div className="max-w-3xl mx-auto pt-4 px-0 md:px-4">
         <FeedItem 
             id={report._id}
-            userId={reportUser._id || report.user} 
+            userId={reportUser?._id || (reportUser as any)?.id || (typeof reportUser === 'string' ? reportUser : undefined)}
             user={{
                 name: userName,
                 handle: userHandle,

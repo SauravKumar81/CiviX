@@ -428,7 +428,7 @@ const HomeFeed: React.FC = () => {
                   <FeedItem 
                     key={report._id}
                     id={report._id || ''}
-                    userId={report.user?._id}
+                    userId={report.user?._id || (report.user as any)?.id || (typeof report.user === 'string' ? report.user : undefined)}
                     user={{ 
                       name: report.user?.name || "Anonymous", 
                       handle: `@${report.user?.username || report.user?.name?.toLowerCase().replace(/\s/g, '') || "citizen"}`, 

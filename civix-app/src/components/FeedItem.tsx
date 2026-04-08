@@ -211,7 +211,7 @@ const FeedItem = ({
     setCommentText('');
   };
 
-  const isOwner = currentUserId === userId;
+  const isOwner = Boolean(currentUserId && userId && String(currentUserId) === String(userId));
 
   return (
     <>

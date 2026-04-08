@@ -29,7 +29,7 @@ const TrendingMapPage: React.FC = () => {
   const [viewState, setViewState] = useState({
     longitude: 77.2090,
     latitude: 28.6139,
-    zoom: 11,
+    zoom: 15,
     pitch: 60,
     bearing: 20
   });
